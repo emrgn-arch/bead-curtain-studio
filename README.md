@@ -2,7 +2,7 @@
 
 A browser tool for designing bead curtains from 3D-printed beads. Upload a picture, place it on the opening, and the app works out the ropes, bead colours and bead lengths, shows a 3D preview, and exports a bill of materials, a stringing guide and print trays for Bambu Studio.
 
-Live version: https://GITHUB_USER.github.io/bead-curtain-studio/
+Live version: https://emrgn-arch.github.io/bead-curtain-studio/
 
 ## Running locally
 
