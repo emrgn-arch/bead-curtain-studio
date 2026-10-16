@@ -25,41 +25,13 @@ function sweepGeometry(): THREE.BufferGeometry {
   return g;
 }
 
-/** White studio backdrop with a slim black display frame the curtain hangs in. */
+/** White studio backdrop; the curtain hangs freely from its rail in front of it. */
 export class Studio {
   readonly group = new THREE.Group();
-  private frame = new THREE.Group();
-  private frameMat = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.5, metalness: 0.15 });
-  private key = '';
 
   constructor() {
     const sweep = new THREE.Mesh(sweepGeometry(), new THREE.MeshStandardMaterial({ color: '#f2f2f2', roughness: 0.96 }));
     sweep.receiveShadow = true;
-    this.group.add(sweep, this.frame);
-  }
-
-  /** Frame around an opening W × H (m): two posts with feet and a top beam. */
-  build(W: number, H: number): void {
-    const key = `${W}|${H}`;
-    if (key === this.key) return;
-    this.key = key;
-    for (const child of [...this.frame.children]) {
-      this.frame.remove(child);
-      (child as THREE.Mesh).geometry.dispose();
-    }
-    const s = 0.022; // profile size
-    const box = (w: number, h: number, d: number, x: number, y: number, z: number) => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), this.frameMat);
-      m.position.set(x, y, z);
-      m.castShadow = true;
-      m.receiveShadow = true;
-      this.frame.add(m);
-    };
-    const px = W / 2 + s / 2 + 0.006;
-    for (const x of [-px, px]) {
-      box(s, H + s, s, x, (H + s) / 2, 0);
-      box(s, s * 0.6, 0.42, x, s * 0.3, 0); // foot
-    }
-    box(2 * px + s, s, s, 0, H + s / 2, 0);
+    this.group.add(sweep);
   }
 }

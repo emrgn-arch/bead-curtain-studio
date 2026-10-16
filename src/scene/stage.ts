@@ -179,7 +179,6 @@ export class Stage {
     const changed = W !== this.opening.W || H !== this.opening.H;
     this.opening = { W, H };
     this.room.build(W, H);
-    this.studio.build(W, H);
     this.curtain.update(d, ropeColor);
     this.overlay.update(L, d.placement, overlayOpacity);
     this.fitShadow();

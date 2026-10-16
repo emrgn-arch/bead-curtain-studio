@@ -1,6 +1,6 @@
 import { isLight } from '../core/color';
 import { download } from '../core/export';
-import { beadLengths } from '../core/layout';
+import { beadLengths, MAX_ROPES } from '../core/layout';
 import { OPENING_PRESETS, STEP_MAX, STEP_MIN, parseFilaments, type AppState, type Filament } from '../core/state';
 import { t } from '../i18n';
 import { colorField, dualRange, fmt, hint, panel, range, readout, segmented, setParams, showIf, type Ctx } from './controls';
@@ -277,7 +277,7 @@ function ropesPanel(ctx: Ctx) {
       set: (p, v) => (p.ropes.density = v),
     }),
     showIf(ctx, range(ctx, { label: t('ropeSpacing'), unit: 'mm', min: 4, max: 60, step: 0.5, get: (p) => p.ropes.pitch, set: (p, v) => (p.ropes.pitch = v) }), (s) => s.params.ropes.density === 'pitch'),
-    showIf(ctx, range(ctx, { label: t('ropeCount'), min: 2, max: 400, hardMax: 1000, step: 1, get: (p) => p.ropes.count, set: (p, v) => (p.ropes.count = Math.round(v)) }), (s) => s.params.ropes.density === 'count'),
+    showIf(ctx, range(ctx, { label: t('ropeCount'), min: 2, max: MAX_ROPES, step: 1, get: (p) => p.ropes.count, set: (p, v) => (p.ropes.count = Math.round(v)) }), (s) => s.params.ropes.density === 'count'),
     range(ctx, { label: t('beadGap'), unit: 'mm', min: 0, max: 20, step: 0.5, get: (p) => p.ropes.sideGap, set: (p, v) => (p.ropes.sideGap = v) }),
     readout(ctx, 'spec-row', (d) => {
       const L = d.layout;

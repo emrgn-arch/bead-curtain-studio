@@ -131,7 +131,7 @@ export const STEP_MAX = 150;
 export function defaultParams(): Params {
   return {
     opening: { width: 900, height: 2100, topOffset: 60, bottomClearance: 40, sideMargin: 10 },
-    ropes: { density: 'pitch', pitch: 12, count: 73, diameter: 1.5, color: '#d9c7a5', holeClearance: 0.5, sideGap: 2 },
+    ropes: { density: 'pitch', pitch: 25, count: 35, diameter: 1.5, color: '#d9c7a5', holeClearance: 0.5, sideGap: 5 },
     image: { offsetX: 0, offsetY: 0, zoom: 1, brightness: 1, contrast: 1, saturation: 1, outside: 'fill', fillColor: '#e9dcc4' },
     resolution: { step: 10, maxLength: 100, lengthCount: 4, dither: 0 },
     colors: { mode: 'free', maxColors: 8 },
@@ -177,7 +177,7 @@ export class Store<T> {
 
 // ---------------------------------------------------------------- persistence (browser localStorage)
 
-const PARAMS_KEY = 'bead-curtain-studio.params.v2';
+const PARAMS_KEY = 'bead-curtain-studio.params.v3';
 const FILAMENTS_KEY = 'bead-curtain-studio.filaments.v1';
 
 function mergeDeep<T>(base: T, patch: unknown): T {

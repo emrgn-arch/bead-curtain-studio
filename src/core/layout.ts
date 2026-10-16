@@ -42,6 +42,7 @@ export interface Layout {
 export const MAX_CELLS = 220_000;
 export const RAIL_DROP = 22; // rail centre below top of opening
 export const MIN_WALL = 0.8;
+export const MAX_ROPES = 100; // upper limit when choosing ropes by count
 
 /**
  * Bead lengths in mm: `count` values spread evenly from the shortest to the
@@ -78,7 +79,7 @@ export function computeLayout(p: Params): Layout {
   let n: number;
   let pitch: number;
   if (r.density === 'count') {
-    n = Math.max(1, Math.min(1000, Math.round(r.count)));
+    n = Math.max(1, Math.min(MAX_ROPES, Math.round(r.count)));
     pitch = (usable + sideGap) / n;
   } else {
     pitch = Math.max(1, r.pitch);
