@@ -125,6 +125,8 @@ export const PRINTERS: Record<PrinterId, { label: string; w: number; d: number }
   h2d: { label: 'H2D', w: 325, d: 320 },
 };
 
+export const MAX_COLOURS = 12;
+
 export const STEP_MIN = 5;
 export const STEP_MAX = 150;
 
@@ -134,7 +136,7 @@ export function defaultParams(): Params {
     ropes: { density: 'pitch', pitch: 25, count: 35, diameter: 1.5, color: '#d9c7a5', holeClearance: 0.5, sideGap: 5 },
     image: { offsetX: 0, offsetY: 0, zoom: 1, brightness: 1, contrast: 1, saturation: 1, outside: 'fill', fillColor: '#e9dcc4' },
     resolution: { step: 10, maxLength: 100, lengthCount: 4, dither: 0 },
-    colors: { mode: 'free', maxColors: 8 },
+    colors: { mode: 'free', maxColors: 4 },
     scene: { backdrop: 'studio', mood: 'golden', motion: true },
     export: { printer: 'x1' },
   };
@@ -177,7 +179,8 @@ export class Store<T> {
 
 // ---------------------------------------------------------------- persistence (browser localStorage)
 
-const PARAMS_KEY = 'bead-curtain-studio.params.v3';
+const PARAMS_KEY = 'bead-curtain-studio.params.v4';
+const PREVIOUS_PARAMS_KEY = 'bead-curtain-studio.params.v3';
 const FILAMENTS_KEY = 'bead-curtain-studio.filaments.v1';
 
 function mergeDeep<T>(base: T, patch: unknown): T {
@@ -212,7 +215,12 @@ function write(key: string, value: unknown): void {
 }
 
 export function loadParams(): Params {
-  return mergeDeep(defaultParams(), read(PARAMS_KEY));
+  const saved = read(PARAMS_KEY);
+  if (saved) return mergeDeep(defaultParams(), saved);
+  // Settings from the previous version carry over, except the colour count, whose default changed.
+  const p = mergeDeep(defaultParams(), read(PREVIOUS_PARAMS_KEY));
+  p.colors.maxColors = defaultParams().colors.maxColors;
+  return p;
 }
 
 export function saveParams(p: Params): void {

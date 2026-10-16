@@ -2,7 +2,7 @@ import { beadLengths, computeLayout, type Layout, type Warning } from './layout'
 import { placeImage, processImage, sampleGrid, type Grid, type Placement } from './image';
 import { buildPalette, mapToPalette, type PaletteEntry } from './quantize';
 import { buildTable, fitRope, ropeRuns, type PlacedBead } from './lengths';
-import type { AppState, Params } from './state';
+import { MAX_COLOURS, type AppState, type Params } from './state';
 
 export const FILAMENT_DENSITY = 1.24; // g/cm³, PLA
 export const ROPE_ALLOWANCE = 150; // mm per rope for the bottom knot and tying onto the rail
@@ -92,7 +92,7 @@ export class DesignEngine {
     const fill = needsFill ? p.image.fillColor : null;
     const paletteKey = JSON.stringify([gridKey, p.colors, state.filaments, fill]);
     const rawPalette = this.memo('palette', paletteKey, () =>
-      buildPalette(grid, { mode: p.colors.mode, maxColors: p.colors.maxColors, inventory: state.filaments, fill }),
+      buildPalette(grid, { mode: p.colors.mode, maxColors: Math.min(MAX_COLOURS, p.colors.maxColors), inventory: state.filaments, fill }),
     );
 
     const mapKey = JSON.stringify([paletteKey, p.resolution.dither]);

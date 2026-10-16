@@ -1,7 +1,7 @@
 import { isLight } from '../core/color';
 import { download } from '../core/export';
 import { beadLengths, MAX_ROPES } from '../core/layout';
-import { OPENING_PRESETS, STEP_MAX, STEP_MIN, parseFilaments, type AppState, type Filament } from '../core/state';
+import { MAX_COLOURS, OPENING_PRESETS, STEP_MAX, STEP_MIN, parseFilaments, type AppState, type Filament } from '../core/state';
 import { t } from '../i18n';
 import { colorField, dualRange, fmt, hint, panel, range, readout, segmented, setParams, showIf, type Ctx } from './controls';
 import { h, ICONS, svgIcon } from './dom';
@@ -109,7 +109,7 @@ function resolutionPanel(ctx: Ctx) {
   return P.el;
 }
 
-// ---------------------------------------------------------------- 03 colours
+// ---------------------------------------------------------------- 04 colours
 
 function updateFilaments(ctx: Ctx, fn: (f: Filament[]) => Filament[]): void {
   ctx.store.update((s) => {
@@ -188,7 +188,7 @@ function colorsPanel(ctx: Ctx) {
 
   const P = panel(
     'colours',
-    '03',
+    '04',
     t('pColours'),
     false,
     segmented(ctx, {
@@ -199,7 +199,7 @@ function colorsPanel(ctx: Ctx) {
       get: (p) => p.colors.mode,
       set: (p, v) => (p.colors.mode = v),
     }),
-    range(ctx, { label: t('maxColours'), min: 1, max: 24, step: 1, get: (p) => p.colors.maxColors, set: (p, v) => (p.colors.maxColors = Math.round(v)) }),
+    range(ctx, { label: t('maxColours'), min: 1, max: MAX_COLOURS, step: 1, get: (p) => p.colors.maxColors, set: (p, v) => (p.colors.maxColors = Math.round(v)) }),
     showIf(ctx, h('button', { type: 'button', class: 'link', onClick: () => setParams(ctx, (p) => (p.colors.mode = 'inventory')) }, t('useOwnFilaments')), (s) => !isFilaments(s)),
     showIf(
       ctx,
@@ -219,7 +219,7 @@ function colorsPanel(ctx: Ctx) {
   return P.el;
 }
 
-// ---------------------------------------------------------------- 04 opening
+// ---------------------------------------------------------------- 05 opening
 
 function openingPanel(ctx: Ctx) {
   const chips = OPENING_PRESETS.map((pr) =>
@@ -237,7 +237,7 @@ function openingPanel(ctx: Ctx) {
 
   const P = panel(
     'opening',
-    '04',
+    '05',
     t('pOpening'),
     false,
     h('div', { class: 'chips chips-3' }, chips),
@@ -260,12 +260,12 @@ function openingPanel(ctx: Ctx) {
   return P.el;
 }
 
-// ---------------------------------------------------------------- 05 ropes & beads
+// ---------------------------------------------------------------- 03 ropes & beads
 
 function ropesPanel(ctx: Ctx) {
   const P = panel(
     'ropes',
-    '05',
+    '03',
     t('pRopes'),
     false,
     segmented(ctx, {
@@ -302,5 +302,5 @@ function ropesPanel(ctx: Ctx) {
 }
 
 export function buildSidebar(ctx: Ctx, actions: SidebarActions): HTMLElement {
-  return h('aside', { class: 'sidebar', 'aria-label': t('settings') }, imagePanel(ctx, actions), resolutionPanel(ctx), colorsPanel(ctx), openingPanel(ctx), ropesPanel(ctx));
+  return h('aside', { class: 'sidebar', 'aria-label': t('settings') }, imagePanel(ctx, actions), resolutionPanel(ctx), ropesPanel(ctx), colorsPanel(ctx), openingPanel(ctx));
 }
