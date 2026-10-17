@@ -75,6 +75,8 @@ export type PrinterId = 'x1' | 'a1mini' | 'h2d';
 
 export interface ExportParams {
   printer: PrinterId;
+  /** Engrave each bead's rope-bead number into its top face. */
+  engrave: boolean;
 }
 
 export interface Params {
@@ -143,7 +145,7 @@ export function defaultParams(): Params {
     resolution: { step: 25, maxLength: 100, lengthCount: 4, dither: 0 },
     colors: { mode: 'free', maxColors: 4 },
     scene: { backdrop: 'studio', mood: 'golden', motion: true, physics: true },
-    export: { printer: 'x1' },
+    export: { printer: 'x1', engrave: true },
   };
 }
 

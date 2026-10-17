@@ -35,7 +35,7 @@ export function bomCsv(d: Design): string {
  */
 export function stringingCsv(d: Design): string {
   const labels = paletteLabels(d.palette);
-  const rows: (string | number)[][] = [[t('csvRopeNo'), t('csvX'), t('csvStep'), t('csvColour'), 'Hex', t('csvLength'), t('csvQty')]];
+  const rows: (string | number)[][] = [[t('csvRopeNo'), t('csvX'), t('csvStep'), t('csvBeadNos'), t('csvColour'), 'Hex', t('csvLength'), t('csvQty')]];
   const byRope: number[][] = Array.from({ length: d.layout.n }, () => []);
   for (let k = 0; k < d.beadCount; k++) byRope[d.bRope[k]].push(k);
   byRope.forEach((beads, rope) => {
@@ -46,7 +46,9 @@ export function stringingCsv(d: Design): string {
       let j = i + 1;
       while (j < beads.length && d.bColor[beads[j]] === d.bColor[k] && d.bLen[beads[j]] === d.bLen[k]) j++;
       const c = d.bColor[k];
-      rows.push([rope + 1, d.layout.ropeX[rope].toFixed(1), ++step, labels[c], d.palette[c].hex.toUpperCase(), d.lengths[d.bLen[k]], j - i]);
+      // The numbers engraved on these beads (after the rope number), e.g. 4–7.
+      const nos = j - i > 1 ? `${i + 1}–${j}` : i + 1;
+      rows.push([rope + 1, d.layout.ropeX[rope].toFixed(1), ++step, nos, labels[c], d.palette[c].hex.toUpperCase(), d.lengths[d.bLen[k]], j - i]);
       i = j;
     }
   });

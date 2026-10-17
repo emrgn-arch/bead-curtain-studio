@@ -1,6 +1,7 @@
 // Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
-// Minimal ZIP writer (entries stored, not compressed). Used for the tray export
-// and for the 3MF packages themselves, which are ZIP containers.
+// Minimal ZIP writer. Used for the tray export and for the 3MF packages
+// themselves, which are ZIP containers. Entries are stored as they are, or
+// deflated with the browser's CompressionStream where it exists.
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -21,6 +22,8 @@ export function crc32(data: Uint8Array): number {
 export interface ZipEntry {
   name: string;
   data: Uint8Array | string;
+  /** Raw-deflated form of `data`; when given, the entry is written compressed. */
+  deflated?: Uint8Array;
 }
 
 export function zip(entries: ZipEntry[]): Uint8Array<ArrayBuffer> {
@@ -37,36 +40,38 @@ export function zip(entries: ZipEntry[]): Uint8Array<ArrayBuffer> {
     const name = enc.encode(e.name);
     const data = typeof e.data === 'string' ? enc.encode(e.data) : e.data;
     const crc = crc32(data);
+    const packed = e.deflated ?? data;
+    const method = e.deflated ? 8 : 0;
 
     const local = new DataView(new ArrayBuffer(30));
     local.setUint32(0, 0x04034b50, true);
     local.setUint16(4, 20, true);
     local.setUint16(6, UTF8, true);
-    local.setUint16(8, 0, true); // stored
+    local.setUint16(8, method, true);
     local.setUint16(10, time, true);
     local.setUint16(12, date, true);
     local.setUint32(14, crc, true);
-    local.setUint32(18, data.length, true);
+    local.setUint32(18, packed.length, true);
     local.setUint32(22, data.length, true);
     local.setUint16(26, name.length, true);
-    parts.push(new Uint8Array(local.buffer), name, data);
+    parts.push(new Uint8Array(local.buffer), name, packed);
 
     const dir = new DataView(new ArrayBuffer(46));
     dir.setUint32(0, 0x02014b50, true);
     dir.setUint16(4, 20, true);
     dir.setUint16(6, 20, true);
     dir.setUint16(8, UTF8, true);
-    dir.setUint16(10, 0, true);
+    dir.setUint16(10, method, true);
     dir.setUint16(12, time, true);
     dir.setUint16(14, date, true);
     dir.setUint32(16, crc, true);
-    dir.setUint32(20, data.length, true);
+    dir.setUint32(20, packed.length, true);
     dir.setUint32(24, data.length, true);
     dir.setUint16(28, name.length, true);
     dir.setUint32(42, offset, true);
     central.push(new Uint8Array(dir.buffer), name);
 
-    offset += 30 + name.length + data.length;
+    offset += 30 + name.length + packed.length;
   }
 
   const dirSize = central.reduce((s, a) => s + a.length, 0);
@@ -85,4 +90,26 @@ export function zip(entries: ZipEntry[]): Uint8Array<ArrayBuffer> {
     p += a.length;
   }
   return out;
+}
+
+async function deflateRaw(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array | undefined> {
+  if (typeof CompressionStream === 'undefined') return undefined;
+  try {
+    const stream = new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  } catch {
+    return undefined;
+  }
+}
+
+/** Like `zip`, with every entry deflated (stored when the browser cannot compress). */
+export async function zipDeflated(entries: ZipEntry[]): Promise<Uint8Array<ArrayBuffer>> {
+  const enc = new TextEncoder();
+  const ready = await Promise.all(
+    entries.map(async (e) => {
+      const data = typeof e.data === 'string' ? enc.encode(e.data) : new Uint8Array(e.data);
+      return { name: e.name, data, deflated: await deflateRaw(data) };
+    }),
+  );
+  return zip(ready);
 }

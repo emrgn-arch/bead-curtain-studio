@@ -61,6 +61,8 @@ export interface Design {
   bom: number[][];
   /** Estimated PLA per colour with the PRINT settings, g. */
   grams: number[];
+  /** Estimated PLA of one bead of each length, g. */
+  beadGrams: number[];
   totalGrams: number;
   ropeLengths: Float32Array;
   totalRope: number;
@@ -223,7 +225,7 @@ export class DesignEngine {
       layout, placement, palette, lengths, chamfer: 0,
       beadCount: count, bRope, bY, bLen, bColor,
       knotCount: knotY.length, knotRope: Uint16Array.from(knotRope), knotY: Float32Array.from(knotY), ropeBottom,
-      colorCounts, lengthCounts, bom, grams, totalGrams, ropeLengths, totalRope,
+      colorCounts, lengthCounts, bom, grams, beadGrams, totalGrams, ropeLengths, totalRope,
       warnings,
     };
   }

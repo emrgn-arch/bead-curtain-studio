@@ -2,10 +2,11 @@
 import { PRINT, type Design } from '../core/design';
 import { bomCsv, download, stringingCsv } from '../core/export';
 import { PRINTERS, type PrinterId } from '../core/state';
-import { planTrays, traysZip } from '../core/trays';
+import { planTrays, trayFile, traysZip, type TrayPlan } from '../core/trays';
 import { paletteLabels, t } from '../i18n';
-import { fmt, int, pct, segmented, type Ctx } from './controls';
+import { fmt, int, pct, segmented, setParams, type Ctx } from './controls';
 import { h, ICONS, svgIcon } from './dom';
+import { drawBeadTop, drawTray } from './trayPreview';
 
 function drawPattern(canvas: HTMLCanvasElement, d: Design): void {
   const L = d.layout;
@@ -60,26 +61,128 @@ export function buildSheet(ctx: Ctx): HTMLElement {
   const bom = h('div', { class: 'bom-wrap' });
   const warnings = h('div', { class: 'warnings' });
   const traysInfo = h('p', { class: 'hint' });
+  const traySelect = h('select', { class: 'select', 'aria-label': t('trayPick') });
+  const trayCanvas = h('canvas', { class: 'tray-preview', 'aria-hidden': 'true' });
+  const trayStats = h('div', { class: 'tray-stats' });
+  const beadTop = h('canvas', { class: 'bead-top', 'aria-hidden': 'true' });
+  const trayNumbers = h('p', {});
+  const trayEngrave = h('div', { class: 'tray-engrave' }, beadTop, trayNumbers);
+  const engraveSwitch = h(
+    'button',
+    { type: 'button', class: 'switch', role: 'switch', 'aria-label': t('engrave'), onClick: () => setParams(ctx, (p) => (p.export.engrave = !p.export.engrave)) },
+    h('span', { class: 'knob' }),
+  );
+  const engraveHint = h('p', { class: 'hint' });
   let latest: Design | null = null;
+  let plan: TrayPlan | null = null;
+  let trayIndex = 0;
 
+  /** Resolves once the browser has had a chance to paint (or after 100 ms in a hidden tab). */
+  const painted = () =>
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => setTimeout(resolve, 0));
+      setTimeout(resolve, 100);
+    });
+  /**
+   * Runs an export while its button shows a spinner and a status line. The
+   * numbered meshes are only built here, when a download is asked for.
+   */
+  const busy = async (btn: HTMLButtonElement, job: (status: (text: string) => Promise<void>) => Promise<void>) => {
+    if (btn.disabled) return;
+    const idle = [...btn.childNodes];
+    const label = h('span', {}, t('preparing'));
+    btn.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), label);
+    btn.disabled = true;
+    btn.classList.add('busy');
+    btn.setAttribute('aria-busy', 'true');
+    try {
+      await painted();
+      await job(async (text) => {
+        label.textContent = text;
+        await painted();
+      });
+    } finally {
+      btn.replaceChildren(...idle);
+      btn.disabled = false;
+      btn.classList.remove('busy');
+      btn.removeAttribute('aria-busy');
+    }
+  };
   const exportBom = () => latest && download('bead-curtain-bom.csv', bomCsv(latest));
   const exportGuide = () => latest && download('bead-curtain-stringing-guide.csv', stringingCsv(latest));
-  const exportTrays = () => {
-    if (!latest) return;
-    const printer = ctx.store.get().params.export.printer;
-    download(`bead-curtain-trays-${printer}.zip`, new Blob([traysZip(latest, printer)], { type: 'application/zip' }));
-  };
+  const exportTrays = () =>
+    busy(allBtn, async (status) => {
+      if (!latest) return;
+      const { printer, engrave } = ctx.store.get().params.export;
+      const data = await traysZip(latest, printer, engrave, (n, total) => status(t('preparingTray', { n, total })));
+      download(`bead-curtain-trays-${printer}.zip`, new Blob([data], { type: 'application/zip' }));
+    });
+  const downloadTray = () =>
+    busy(trayBtn, async () => {
+      if (!latest) return;
+      const { printer, engrave } = ctx.store.get().params.export;
+      const file = await trayFile(latest, printer, trayIndex, engrave);
+      if (file) download(file.name, new Blob([file.data], { type: 'model/3mf' }));
+    });
+  const trayBtn = h('button', { type: 'button', class: 'btn btn-primary btn-block', onClick: downloadTray }, svgIcon(ICONS.download, 16), t('downloadTray'));
+  const allBtn = h('button', { type: 'button', class: 'btn btn-ghost btn-block', onClick: exportTrays }, svgIcon(ICONS.layers, 16), t('exportTrays'));
 
   const printer = segmented(ctx, {
     options: (Object.keys(PRINTERS) as PrinterId[]).map((id) => ({ value: id, label: PRINTERS[id].label, title: `${PRINTERS[id].w} × ${PRINTERS[id].d} mm` })),
     get: (p) => p.export.printer,
     set: (p, v) => (p.export.printer = v),
   });
+  /** Preview and facts for the tray picked in the dropdown. */
+  const renderTray = () => {
+    const d = latest;
+    const tray = plan?.trays[trayIndex];
+    if (!d || !plan || !tray) return;
+    drawTray(trayCanvas, d, plan, tray);
+    const hex = d.palette[tray.color].hex.toUpperCase();
+    const perLength = new Map<number, number>();
+    for (const li of tray.beads) perLength.set(li, (perLength.get(li) ?? 0) + 1);
+    const grams = tray.beads.reduce((sum, li) => sum + d.beadGrams[li], 0);
+    trayStats.replaceChildren(
+      h('div', { class: 'tray-colour' }, h('span', { class: 'dot', style: { background: hex } }), h('b', {}, paletteLabels(d.palette)[tray.color]), h('code', {}, hex)),
+      h('p', {}, t('trayStats', { n: int(tray.beads.length), g: int(grams) })),
+      h(
+        'p',
+        { class: 'tray-lengths' },
+        [...perLength.entries()].sort((a, b) => d.lengths[b[0]] - d.lengths[a[0]]).map(([li, n]) => `${d.lengths[li]} mm × ${int(n)}`).join('  ·  '),
+      ),
+    );
+    const lettering = ctx.store.get().params.export.engrave ? plan.lettering : null;
+    trayEngrave.hidden = !lettering;
+    if (lettering) {
+      drawBeadTop(beadTop, d, tray, lettering);
+      trayNumbers.textContent = t('trayNumbers', { from: tray.range[0], to: tray.range[1] });
+    }
+  };
+  traySelect.addEventListener('change', () => {
+    trayIndex = Number(traySelect.value);
+    renderTray();
+  });
+
   const updateTrays = () => {
     if (!latest) return;
     const id = ctx.store.get().params.export.printer;
     const pl = PRINTERS[id];
-    traysInfo.textContent = t('traysSummary', { n: planTrays(latest, id).trays.length, size: `${pl.w} × ${pl.d}` });
+    plan = planTrays(latest, id);
+    traysInfo.textContent = t('traysSummary', { n: plan.trays.length, size: `${pl.w} × ${pl.d}` });
+    const engrave = ctx.store.get().params.export.engrave;
+    engraveSwitch.classList.toggle('on', engrave);
+    engraveSwitch.setAttribute('aria-checked', String(engrave));
+    engraveHint.textContent = plan.lettering ? t('engraveHint') : t('engraveTooSmall');
+    engraveHint.hidden = !engrave;
+    if (trayIndex >= plan.trays.length) trayIndex = 0;
+    const labels = paletteLabels(latest.palette);
+    traySelect.replaceChildren(
+      ...plan.trays.map((tray, i) =>
+        h('option', { value: i }, t('trayOption', { n: tray.number, colour: labels[tray.color], count: int(tray.beads.length) }) + (tray.parts > 1 ? ` (${tray.part}/${tray.parts})` : '')),
+      ),
+    );
+    traySelect.value = String(trayIndex);
+    renderTray();
   };
   ctx.onState.push(updateTrays);
 
@@ -188,7 +291,11 @@ export function buildSheet(ctx: Ctx): HTMLElement {
       h('h3', {}, t('trays')),
       printer,
       traysInfo,
-      h('button', { type: 'button', class: 'btn btn-primary btn-block', onClick: exportTrays }, svgIcon(ICONS.layers, 17), t('exportTrays')),
+      h('label', { class: 'switch-row' }, h('span', {}, t('engrave')), engraveSwitch),
+      engraveHint,
+      h('div', { class: 'tray-card' }, traySelect, trayCanvas, trayStats, trayEngrave),
+      h('div', { class: 'btn-col' }, trayBtn, allBtn),
+      h('p', { class: 'hint' }, t('trayOpenHint')),
     ),
   );
 }
