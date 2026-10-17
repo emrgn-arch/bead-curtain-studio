@@ -1,5 +1,5 @@
 // Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
-import type { Design } from '../core/design';
+import { PRINT, type Design } from '../core/design';
 import { bomCsv, download, stringingCsv } from '../core/export';
 import { PRINTERS, type PrinterId } from '../core/state';
 import { planTrays, traysZip } from '../core/trays';
@@ -113,8 +113,20 @@ export function buildSheet(ctx: Ctx): HTMLElement {
         [t('specBeadOD'), `${fmt(L.beadOD)} mm`],
         [t('holeDia'), `${fmt(L.hole, 2)} mm`],
         [t('wall'), `${fmt(L.wall, 2)} mm`],
-        [t('specFilament'), `${fmt(d.totalGrams / 1000, 2)} kg`],
+        [t('specPla'), `${fmt(d.totalGrams / 1000, 2)} kg`],
       ]),
+      h(
+        'dd',
+        { class: 'spec-note' },
+        t('plaNote', {
+          infill: Math.round(PRINT.infill * 100),
+          walls: PRINT.perimeters,
+          layers:
+            PRINT.bottomLayers === PRINT.topLayers
+              ? t('layersSame', { n: PRINT.topLayers })
+              : t('layersSplit', { bottom: PRINT.bottomLayers, top: PRINT.topLayers }),
+        }),
+      ),
     );
 
     const total = Math.max(1, d.beadCount);

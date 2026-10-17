@@ -6,6 +6,31 @@ import { buildTable, fitRope, ropeRuns, type PlacedBead } from './lengths';
 import { MAX_COLOURS, type AppState, type Params } from './state';
 
 export const FILAMENT_DENSITY = 1.24; // g/cm³, PLA
+/** Print settings the PLA estimate assumes (shown next to the estimate). */
+export const PRINT = {
+  infill: 0.5,
+  perimeters: 3, // wall loops, on the outside and around the hole
+  lineWidth: 0.42, // mm
+  layerHeight: 0.2, // mm
+  bottomLayers: 5,
+  topLayers: 5,
+};
+
+/**
+ * Printed volume (mm³) of one tube bead as a slicer would make it: solid
+ * perimeters on both walls, solid top and bottom layers, and sparse infill in
+ * the core between them. A wall too thin for infill prints solid.
+ */
+function printedVolume(R: number, r: number, L: number): number {
+  const ring = (a: number, b: number) => Math.PI * (b * b - a * a);
+  const wall = PRINT.perimeters * PRINT.lineWidth;
+  const caps = (PRINT.bottomLayers + PRINT.topLayers) * PRINT.layerHeight;
+  const solid = ring(r, R) * L;
+  const coreIn = r + wall;
+  const coreOut = R - wall;
+  if (coreOut <= coreIn) return solid;
+  return solid - ring(coreIn, coreOut) * Math.max(0, L - caps) * (1 - PRINT.infill);
+}
 export const ROPE_ALLOWANCE = 150; // mm per rope for the bottom knot and tying onto the rail
 
 export interface Design {
@@ -34,6 +59,7 @@ export interface Design {
   lengthCounts: number[];
   /** bom[color][length] = bead count. */
   bom: number[][];
+  /** Estimated PLA per colour with the PRINT settings, g. */
   grams: number[];
   totalGrams: number;
   ropeLengths: Float32Array;
@@ -180,8 +206,8 @@ export class DesignEngine {
       }
     }
 
-    const ring = (Math.PI / 4) * (layout.beadOD ** 2 - layout.hole ** 2); // mm²
-    const grams = bom.map((row) => row.reduce((s, cnt, li) => s + (cnt * ring * lengths[li] * FILAMENT_DENSITY) / 1000, 0));
+    const beadGrams = lengths.map((L) => (printedVolume(layout.beadOD / 2, layout.hole / 2, L) * FILAMENT_DENSITY) / 1000);
+    const grams = bom.map((row) => row.reduce((s, cnt, li) => s + cnt * beadGrams[li], 0));
     const totalGrams = grams.reduce((a, b) => a + b, 0);
 
     const ropeLengths = new Float32Array(n);

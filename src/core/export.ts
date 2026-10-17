@@ -11,7 +11,7 @@ function csv(rows: (string | number)[][]): string {
 /** Bead counts per colour × length plus filament estimate. */
 export function bomCsv(d: Design): string {
   const labels = paletteLabels(d.palette);
-  const rows: (string | number)[][] = [[t('csvColour'), 'Hex', ...d.lengths.map((l) => `${l} mm`), t('csvTotalBeads'), t('csvFilament')]];
+  const rows: (string | number)[][] = [[t('csvColour'), 'Hex', ...d.lengths.map((l) => `${l} mm`), t('csvTotalBeads'), t('csvPla')]];
   d.palette.forEach((p, ci) => {
     const name = p.match ? `${labels[ci]} (≈ ${p.match.name})` : labels[ci];
     rows.push([name, p.hex.toUpperCase(), ...d.bom[ci], d.colorCounts[ci], Math.round(d.grams[ci])]);

@@ -432,6 +432,7 @@ body.dragging .drop-veil { display: grid; }
 .specs.group { margin-bottom: -6px; }
 .specs dt { color: var(--ink-2); }
 .specs dd { margin: 0; font: 500 12px var(--mono); text-align: right; }
+.specs .spec-note { grid-column: 1 / -1; text-align: left; font: 400 10.5px/1.35 var(--ui); color: var(--ink-3); margin-top: -3px; }
 
 .table { display: flex; flex-direction: column; }
 .row { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 2px 10px; border-bottom: 1px solid var(--line); }
