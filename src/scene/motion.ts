@@ -14,10 +14,12 @@ const MAX_STEPS = 6; // per frame
 const ITERATIONS = 20; // constraint passes per step: enough that ropes do not stretch
 const GRAVITY = 9.81;
 const DAMPING = 0.95; // velocity kept per step: heavy beads settle with almost no bounce
-const HOME = 2; // faint pull back to rest; gravity does the real work, like a hanging strand
-const WIND = 0.2; // breeze acceleration, m/s²
-const HAND_REACH = 0.22; // radius of the pointer's influence, m (at least 6 rope spacings)
+const HOME = 6; // faint pull back to rest; gravity does the real work, like a hanging strand
+const WIND = 0.22; // breeze acceleration, m/s²
+const HAND_REACH = 0.3; // radius of the pointer's influence, m (at least 6 rope spacings)
 const SLEEP_SPEED = 2e-5; // m per step (about 4 mm/s): below this the curtain snaps to rest
+const STRETCH = 0.1; // how much longer a pulled rope may get (0.1 = 10%): its beads spread apart
+const STRETCH_RECOVERY = 6; // 1/s: how quickly a released rope draws its beads back together
 
 export interface MotionUniforms {
   uDisp: { value: THREE.DataTexture };
@@ -69,6 +71,9 @@ export class CurtainMotion {
   private pos = new Float32Array(0);
   private prev = new Float32Array(0);
   private halfWidth = 0; // keep ropes inside the doorway (0 = no limit)
+  /** Per rope: current length factor (1 = natural) for the segments above its held point. */
+  private stretch = new Float32Array(0);
+  private stretchTo = new Int16Array(0);
 
   private breeze = false;
   private physics = false;
@@ -107,6 +112,8 @@ export class CurtainMotion {
     }
     this.pos = Float32Array.from(this.rest);
     this.prev = Float32Array.from(this.rest);
+    this.stretch = new Float32Array(n).fill(1);
+    this.stretchTo = new Int16Array(n);
     this.held = [];
     this.awake = this.breeze;
 
@@ -141,9 +148,11 @@ export class CurtainMotion {
     if (!this.awake || this.n === 0) return false;
     this.acc = Math.min(this.acc + Math.min(dt, 1 / 20), STEP * MAX_STEPS);
     let moved = 0;
+    const recover = Math.exp(-STRETCH_RECOVERY * STEP);
     while (this.acc >= STEP) {
       this.acc -= STEP;
       moved = Math.max(moved, this.integrate(time));
+      for (let r = 0; r < this.n; r++) this.stretch[r] = 1 + (this.stretch[r] - 1) * recover;
       this.applyHands();
       for (let i = 0; i < ITERATIONS; i++) this.solve();
     }
@@ -189,23 +198,33 @@ export class CurtainMotion {
     return maxMove;
   }
 
-  /** Held nodes follow the pointer; nearby ropes follow with less weight. */
+  /** Held nodes follow the pointer; nearby ropes follow with less weight. A pulled rope may stretch a little. */
   private applyHands(): void {
     const d = this.delta;
     const target = new THREE.Vector3();
     for (const h of this.held) {
       target.copy(h.start).addScaledVector(d, h.weight);
-      // A rope cannot stretch: keep the target within reach of where it hangs from the rail.
+      // Keep the target within the rope's reach from the rail, allowing a little stretch.
       const rope = Math.floor(h.index / NODES);
       const node = h.index - rope * NODES;
       const a = rope * NODES * 3;
       const ax = this.rest[a];
       const ay = this.rest[a + 1];
       const az = this.rest[a + 2];
-      const dist = Math.hypot(target.x - ax, target.y - ay, target.z - az);
-      const reach = node * this.seg * 0.999;
-      if (dist > reach) target.set(ax + ((target.x - ax) * reach) / dist, ay + ((target.y - ay) * reach) / dist, az + ((target.z - az) * reach) / dist);
-      target.y = Math.max(0.004, target.y);
+      const length = node * this.seg;
+      const reach = length * (1 + STRETCH) * 0.999;
+      let dist = Math.hypot(target.x - ax, target.y - ay, target.z - az);
+      if (dist > reach) {
+        target.set(ax + ((target.x - ax) * reach) / dist, ay + ((target.y - ay) * reach) / dist, az + ((target.z - az) * reach) / dist);
+        dist = reach;
+      }
+      target.y = Math.max(0.004, target.y); // floor
+      dist = Math.hypot(target.x - ax, target.y - ay, target.z - az);
+      // Segments above the hand lengthen just enough to reach it, so those beads spread evenly.
+      if (dist > length) {
+        this.stretch[rope] = Math.max(this.stretch[rope], dist / length);
+        this.stretchTo[rope] = node;
+      }
 
       const o = h.index * 3;
       const w = h.weight >= 0.999 ? 1 : h.weight * 0.6;
@@ -221,6 +240,8 @@ export class CurtainMotion {
     const pinned = this.held.length && this.held[0].weight >= 0.999 ? this.held[0].index : -1;
     for (let r = 0; r < n; r++) {
       const base = r * NODES;
+      const stretched = seg * this.stretch[r];
+      const stretchTo = this.stretchTo[r];
       pos[base * 3] = rest[base * 3];
       pos[base * 3 + 1] = rest[base * 3 + 1];
       pos[base * 3 + 2] = rest[base * 3 + 2];
@@ -233,7 +254,7 @@ export class CurtainMotion {
         const dy = pos[b + 1] - pos[a + 1];
         const dz = pos[b + 2] - pos[a + 2];
         const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-9;
-        const diff = (len - seg) / len;
+        const diff = (len - (k < stretchTo ? stretched : seg)) / len;
         const fixA = k === 0 || i === pinned;
         const fixB = j === pinned;
         if (fixA && fixB) continue;
@@ -309,8 +330,10 @@ export class CurtainMotion {
   }
 
   /**
-   * Grab a rope at a node. Every rope point within the hand's reach comes along,
-   * pulled less the further it is from the cursor (smooth radial falloff).
+   * Grab a rope at a node. Every rope within the hand's reach comes along at its
+   * point nearest the cursor, pulled less the further that point is from the
+   * cursor (smooth radial falloff). One point per rope keeps each rope a single
+   * smooth curve and gives each rope one place where it can stretch.
    */
   beginGrab(target: GrabTarget, ray: THREE.Ray, camera: THREE.Camera): void {
     const viewDir = new THREE.Vector3();
@@ -324,15 +347,25 @@ export class CurtainMotion {
     const p = target.point;
     this.held = [];
     for (let r = 0; r < this.n; r++) {
-      for (let k = 1; k < NODES; k++) {
-        const index = r * NODES + k;
-        const o = index * 3;
-        const dist = Math.hypot(this.pos[o] - p.x, this.pos[o + 1] - p.y, this.pos[o + 2] - p.z);
-        if (index !== grabbed && dist > reach) continue;
-        const f = 1 - (dist / reach) ** 2;
-        const start = new THREE.Vector3(this.pos[o], this.pos[o + 1], this.pos[o + 2]);
-        this.held.push({ index, weight: index === grabbed ? 1 : Math.max(0, f) ** 2, start });
+      let index = -1;
+      let dist = Infinity;
+      if (r === target.rope) {
+        index = grabbed;
+        dist = 0;
+      } else {
+        for (let k = 1; k < NODES; k++) {
+          const o = (r * NODES + k) * 3;
+          const d = Math.hypot(this.pos[o] - p.x, this.pos[o + 1] - p.y, this.pos[o + 2] - p.z);
+          if (d < dist) {
+            dist = d;
+            index = r * NODES + k;
+          }
+        }
+        if (dist > reach) continue;
       }
+      const o = index * 3;
+      const f = 1 - (dist / reach) ** 2;
+      this.held.push({ index, weight: index === grabbed ? 1 : f * f, start: new THREE.Vector3(this.pos[o], this.pos[o + 1], this.pos[o + 2]) });
     }
     this.held.sort((a, b) => b.weight - a.weight); // the grabbed point first
     this.awake = true;
