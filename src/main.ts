@@ -1,9 +1,12 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import './styles.css';
 import { DesignEngine, type Design } from './core/design';
 import { download } from './core/export';
-import { containZoom, loadImageFile, makeDemoImage } from './core/image';
+import { containZoom, loadDemoImage, loadImageFile } from './core/image';
 import { defaultParams, defaultUi, loadFilaments, loadParams, saveFilaments, saveParams, Store, type AppState, type ImageParams } from './core/state';
 import { clearImage, loadImage, saveImage } from './core/storage';
+import { AUTHOR, CREDIT, REPO_URL } from './credit';
+import { withPngText } from './core/png';
 import { getLang, setLang, t, type Lang } from './i18n';
 import { Stage } from './scene/stage';
 import { buildSheet } from './ui/buildsheet';
@@ -45,8 +48,8 @@ async function useFile(file: File): Promise<void> {
   }
 }
 
-function useDemo(): void {
-  engine.setSource(makeDemoImage());
+async function useDemo(): Promise<void> {
+  engine.setSource(await loadDemoImage());
   store.update((s) => {
     s.ui.imageVersion++;
     s.ui.imageName = '';
@@ -89,8 +92,11 @@ function screenshot(): void {
   if (!stage) return;
   const url = stage.snapshot();
   fetch(url)
-    .then((r) => r.blob())
-    .then((b) => download(`bead-curtain-${new Date().toISOString().slice(0, 10)}.png`, b));
+    .then((r) => r.arrayBuffer())
+    .then((buf) => {
+      const png = withPngText(new Uint8Array(buf), { Software: CREDIT, Source: REPO_URL, Author: AUTHOR });
+      download(`bead-curtain-${new Date().toISOString().slice(0, 10)}.png`, new Blob([png], { type: 'image/png' }));
+    });
 }
 
 // ---------------------------------------------------------------- layout
@@ -127,7 +133,7 @@ function buildHeader(): HTMLElement {
   return h(
     'header',
     { class: 'topbar' },
-    h('div', { class: 'brand' }, h('span', { class: 'logo' }, 'Strands'), h('span', { class: 'sticker' }, t('sticker'))),
+    h('div', { class: 'brand' }, h('a', { class: 'logo', href: REPO_URL, target: '_blank', rel: 'noopener', title: CREDIT }, 'Strands'), h('span', { class: 'sticker' }, t('sticker'))),
     h('span', { class: 'tagline' }, t('tagline')),
     h('div', { class: 'top-actions' }, langSwitch, resetBtn, h('button', { type: 'button', class: 'btn btn-dark', onClick: () => fileInput.click() }, svgIcon(ICONS.upload, 16), t('uploadImage'))),
   );
@@ -151,7 +157,7 @@ function mountUI(): void {
   if (stage) bindStage(stage);
   const sidebar = buildSidebar(ctx, {
     openFile: () => fileInput.click(),
-    useDemo,
+    useDemo: () => void useDemo(),
     setOverlay,
     preview: () => engine.processed(store.get().params),
   });
@@ -169,6 +175,7 @@ function switchLanguage(l: Lang): void {
 }
 
 mountUI();
+console.info(`%c${CREDIT}`, 'font: 12px monospace');
 
 // ---------------------------------------------------------------- drag & drop anywhere
 
@@ -212,7 +219,7 @@ function run(): void {
   if (stage) {
     stage.setOverlayImage(engine.processed(s.params));
     stage.setLook(s.params.scene.backdrop, s.params.scene.mood);
-    stage.setMotion(s.params.scene.motion);
+    stage.setMotion(s.params.scene.motion, s.params.scene.physics);
     stage.setDesign(design, s.params.ropes.color, s.ui.overlayOpacity);
     stage.setOverlayMode(s.ui.overlay);
   }
@@ -264,7 +271,7 @@ schedule();
     }
   }
   if (!restored) {
-    engine.setSource(makeDemoImage());
+    engine.setSource(await loadDemoImage());
     store.update((s) => {
       s.ui.imageVersion++;
     });

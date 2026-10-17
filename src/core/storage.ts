@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 // Keeps the last uploaded image in IndexedDB so a reload does not lose it.
 
 const DB = 'bead-curtain-studio';

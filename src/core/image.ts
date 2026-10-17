@@ -1,3 +1,5 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
+import demoUrl from '../assets/demo.jpg';
 import { linearToOklab, linearToSrgb8, srgb8ToLinear } from './color';
 import type { Layout } from './layout';
 import type { ImageParams } from './state';
@@ -25,62 +27,10 @@ export async function loadImageFile(file: Blob): Promise<ImageBitmap> {
   return createImageBitmap(file, { imageOrientation: 'from-image' });
 }
 
-/** A warm retro sunset, so the app has something to show before an upload. */
-export function makeDemoImage(): HTMLCanvasElement {
-  const w = 1000;
-  const h = 1600;
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  const g = c.getContext('2d')!;
-
-  const sky = g.createLinearGradient(0, 0, 0, h * 0.62);
-  sky.addColorStop(0, '#2b1a3a');
-  sky.addColorStop(0.35, '#a1305a');
-  sky.addColorStop(0.7, '#f06a2a');
-  sky.addColorStop(1, '#ffc46b');
-  g.fillStyle = sky;
-  g.fillRect(0, 0, w, h);
-
-  // Sun with horizontal cut stripes.
-  const cx = w * 0.5;
-  const cy = h * 0.5;
-  const r = w * 0.3;
-  const sun = g.createLinearGradient(0, cy - r, 0, cy + r);
-  sun.addColorStop(0, '#fff1b8');
-  sun.addColorStop(1, '#ff8f2e');
-  g.fillStyle = sun;
-  g.beginPath();
-  g.arc(cx, cy, r, 0, Math.PI * 2);
-  g.fill();
-  const sky2 = g.createLinearGradient(0, 0, 0, h * 0.62);
-  sky2.addColorStop(0.35, '#a1305a');
-  sky2.addColorStop(0.7, '#f06a2a');
-  sky2.addColorStop(1, '#ffc46b');
-  g.fillStyle = sky2;
-  for (let i = 0; i < 6; i++) {
-    const y = cy + r * 0.12 + i * r * 0.16;
-    g.fillRect(cx - r - 2, y, 2 * r + 4, 8 + i * 5);
-  }
-
-  // Layered dunes.
-  const dune = (base: number, amp: number, freq: number, phase: number, color: string) => {
-    g.fillStyle = color;
-    g.beginPath();
-    g.moveTo(0, h);
-    for (let x = 0; x <= w; x += 8) {
-      const y = base + Math.sin(x * freq + phase) * amp + Math.sin(x * freq * 2.3 + phase * 1.7) * amp * 0.35;
-      g.lineTo(x, y);
-    }
-    g.lineTo(w, h);
-    g.closePath();
-    g.fill();
-  };
-  dune(h * 0.6, 26, 0.006, 0.8, '#c4502b');
-  dune(h * 0.68, 34, 0.005, 2.2, '#8e3423');
-  dune(h * 0.77, 30, 0.0045, 4.1, '#5e2418');
-  dune(h * 0.87, 26, 0.004, 1.3, '#38160f');
-  return c;
+/** The built-in example photo (inlined into the build, so it also works offline). */
+export async function loadDemoImage(): Promise<ImageBitmap> {
+  const res = await fetch(demoUrl);
+  return loadImageFile(await res.blob());
 }
 
 // ---------------------------------------------------------------- placement

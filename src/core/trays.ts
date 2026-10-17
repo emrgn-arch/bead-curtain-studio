@@ -1,6 +1,8 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 // Print trays: every bead laid out standing upright on Bambu Lab build plates,
 // one colour per tray, exported as 3MF files Bambu Studio opens directly.
 
+import { CREDIT } from '../credit';
 import { paletteLabels, t } from '../i18n';
 import type { Design } from './design';
 import { PRINTERS, type PrinterId } from './state';
@@ -87,7 +89,7 @@ function package3mf(title: string, resources: string, build: string): Uint8Array
   const model =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">` +
-    `<metadata name="Title">${esc(title)}</metadata><metadata name="Application">Strands Bead Curtain Studio</metadata>` +
+    `<metadata name="Title">${esc(title)}</metadata><metadata name="Application">${esc(CREDIT)}</metadata>` +
     `<resources>${resources}</resources><build>${build}</build></model>`;
   return zip([
     {
@@ -159,7 +161,7 @@ export function traysZip(d: Design, printer: PrinterId): Uint8Array<ArrayBuffer>
     const resources = `<object id="2" type="model" name="Bead ${L} mm">${meshes[li]}</object>`;
     entries.push({ name: `singles/bead-${L}mm.3mf`, data: package3mf(`Bead ${L} mm`, resources, `<item objectid="2" transform="${centre}"/>`) });
   });
-  readme.push('', t('readmeSingles'));
+  readme.push('', t('readmeSingles'), '', CREDIT);
   entries.push({ name: 'README.txt', data: readme.join('\r\n') });
   return zip(entries);
 }

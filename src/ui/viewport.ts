@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import type { Design } from '../core/design';
 import type { ImageParams } from '../core/state';
 import type { Stage, View } from '../scene/stage';
@@ -45,9 +46,12 @@ export function buildViewport(ctx: Ctx, host: HTMLElement, a: ViewportActions): 
   backdrop.classList.add('vp-mood');
 
   const motion = h('button', { type: 'button', class: 'btn btn-glass btn-motion', title: t('motionTitle'), onClick: () => setParams(ctx, (p) => (p.scene.motion = !p.scene.motion)) }, svgIcon(ICONS.wind, 16), t('motion'));
+  const physics = h('button', { type: 'button', class: 'btn btn-glass btn-motion', title: t('physicsTitle'), onClick: () => setParams(ctx, (p) => (p.scene.physics = !p.scene.physics)) }, svgIcon(ICONS.hand, 16), t('physics'));
   ctx.onState.push((s) => {
     motion.classList.toggle('on', s.params.scene.motion);
     motion.setAttribute('aria-pressed', String(s.params.scene.motion));
+    physics.classList.toggle('on', s.params.scene.physics);
+    physics.setAttribute('aria-pressed', String(s.params.scene.physics));
   });
 
   const badge = h('div', { class: 'vp-badge' });
@@ -91,7 +95,7 @@ export function buildViewport(ctx: Ctx, host: HTMLElement, a: ViewportActions): 
     'main',
     { class: 'viewport' },
     host,
-    h('div', { class: 'vp-top' }, h('div', { class: 'seg seg-dark', role: 'group', 'aria-label': t('cameraView') }, viewBtns), h('div', { class: 'vp-right' }, backdrop, mood, motion, h('button', { type: 'button', class: 'btn btn-glass btn-icon', title: t('screenshotTitle'), 'aria-label': t('screenshot'), onClick: a.screenshot }, svgIcon(ICONS.camera, 17)))),
+    h('div', { class: 'vp-top' }, h('div', { class: 'seg seg-dark', role: 'group', 'aria-label': t('cameraView') }, viewBtns), h('div', { class: 'vp-right' }, backdrop, mood, motion, physics, h('button', { type: 'button', class: 'btn btn-glass btn-icon', title: t('screenshotTitle'), 'aria-label': t('screenshot'), onClick: a.screenshot }, svgIcon(ICONS.camera, 17)))),
     badge,
     bar,
     h('div', { class: 'drop-veil' }, h('span', {}, t('dropToLoad'))),

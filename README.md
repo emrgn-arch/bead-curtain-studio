@@ -14,3 +14,7 @@ npm run dev
 ```
 
 `npm run build` writes a static version to `dist/`. Open `dist/index.html` directly in a browser; no server is needed.
+
+## License
+
+Copyright (c) 2026 Emre Ergin. All rights reserved. See [LICENSE](LICENSE).

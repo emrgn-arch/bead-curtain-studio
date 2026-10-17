@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import { defineConfig, type Plugin } from 'vite';
 
 /**
@@ -19,9 +20,25 @@ function classicScript(): Plugin {
   };
 }
 
+/** Copyright banner at the top of the built app.js and app.css (survives minification). */
+function banner(): Plugin {
+  const text = '/*! Strands - (c) 2026 Emre Ergin (emrgn-arch) - https://github.com/emrgn-arch/bead-curtain-studio - All rights reserved. */\n';
+  return {
+    name: 'banner',
+    apply: 'build',
+    enforce: 'post',
+    generateBundle(_options, bundle) {
+      for (const file of Object.values(bundle)) {
+        if (file.type === 'chunk') file.code = text + file.code;
+        else if (file.fileName.endsWith('.css') && typeof file.source === 'string') file.source = text + file.source;
+      }
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
-  plugins: [classicScript()],
+  plugins: [classicScript(), banner()],
   server: { port: 5173 },
   build: {
     target: 'es2022',

@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import * as THREE from 'three';
 
 function rng(seed: number) {

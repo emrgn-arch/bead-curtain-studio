@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import { beadLengths, computeLayout, type Layout, type Warning } from './layout';
 import { placeImage, processImage, sampleGrid, type Grid, type Placement } from './image';
 import { buildPalette, mapToPalette, type PaletteEntry } from './quantize';

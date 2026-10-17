@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import type { Design } from '../core/design';
 import { bomCsv, download, stringingCsv } from '../core/export';
 import { PRINTERS, type PrinterId } from '../core/state';
@@ -51,7 +52,9 @@ function drawPattern(canvas: HTMLCanvasElement, d: Design): void {
 export function buildSheet(ctx: Ctx): HTMLElement {
   const canvas = h('canvas', { class: 'pattern', 'aria-label': t('patternAria') });
   const stats = h('div', { class: 'stats' });
-  const specs = h('dl', { class: 'specs' });
+  // Each stat tile has its own shade; the details that belong to it share that shade.
+  const ropeSpecs = h('dl', { class: 'specs group g-ropes' });
+  const beadSpecs = h('dl', { class: 'specs group g-beads' });
   const colors = h('div', { class: 'table' });
   const lengths = h('div', { class: 'len-list' });
   const bom = h('div', { class: 'bom-wrap' });
@@ -88,24 +91,30 @@ export function buildSheet(ctx: Ctx): HTMLElement {
 
     stats.replaceChildren(
       ...[
-        [t('statRopes'), int(L.n)],
-        [t('statBeads'), int(d.beadCount)],
-        [t('statColours'), String(d.palette.length)],
-        [t('statLengths'), String(d.lengthCounts.filter((c) => c > 0).length)],
-      ].map(([label, value]) => h('div', { class: 'stat' }, h('span', { class: 'stat-value' }, value), h('span', { class: 'stat-label' }, label))),
+        ['g-ropes', t('statRopes'), int(L.n)],
+        ['g-beads', t('statBeads'), int(d.beadCount)],
+        ['g-colours', t('statColours'), String(d.palette.length)],
+        ['g-lengths', t('statLengths'), String(d.lengthCounts.filter((c) => c > 0).length)],
+      ].map(([group, label, value]) => h('div', { class: `stat ${group}` }, h('span', { class: 'stat-value' }, value), h('span', { class: 'stat-label' }, label))),
     );
 
+    const rows = (list: [string, string][]) => list.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]);
     const maxRope = Math.max(...Array.from(d.ropeLengths));
-    specs.replaceChildren(
-      ...([
-        [t('specBeadOD'), `${fmt(L.beadOD)} mm`],
-        [t('holeDia'), `${fmt(L.hole, 2)} mm`],
-        [t('wall'), `${fmt(L.wall, 2)} mm`],
+    ropeSpecs.replaceChildren(
+      ...rows([
+        [t('ropeDia'), `${fmt(L.ropeD)} mm`],
         [t('ropeSpacing'), `${fmt(L.pitch, 2)} mm`],
         [t('specRopeEach'), `≤ ${fmt(maxRope / 1000, 2)} m`],
         [t('specRopeTotal'), `${fmt(d.totalRope / 1000, 1)} m`],
+      ]),
+    );
+    beadSpecs.replaceChildren(
+      ...rows([
+        [t('specBeadOD'), `${fmt(L.beadOD)} mm`],
+        [t('holeDia'), `${fmt(L.hole, 2)} mm`],
+        [t('wall'), `${fmt(L.wall, 2)} mm`],
         [t('specFilament'), `${fmt(d.totalGrams / 1000, 2)} kg`],
-      ] as [string, string][]).flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]),
+      ]),
     );
 
     const total = Math.max(1, d.beadCount);
@@ -150,11 +159,10 @@ export function buildSheet(ctx: Ctx): HTMLElement {
     warnings,
     h('div', { class: 'pattern-wrap' }, canvas),
     stats,
-    specs,
-    h('h3', {}, t('pColours')),
-    colors,
-    h('h3', {}, t('hLengths')),
-    lengths,
+    ropeSpecs,
+    beadSpecs,
+    h('div', { class: 'group g-colours' }, h('h3', {}, t('pColours')), colors),
+    h('div', { class: 'group g-lengths' }, h('h3', {}, t('hLengths')), lengths),
     h('details', { class: 'more' }, h('summary', {}, t('matrix')), bom),
     h(
       'div',

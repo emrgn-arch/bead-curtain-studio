@@ -1,15 +1,17 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { Design } from '../core/design';
 import type { Backdrop, Mood } from '../core/state';
 import { Curtain } from './curtain';
+import { CurtainMotion } from './motion';
 import { Overlay } from './overlay';
 import { Room } from './room';
 import { Studio } from './studio';
 
 const MM = 0.001;
-const SWAY_AMPLITUDE = 0.007; // metres at the bottom of the curtain
+const GRAB_PX = 24; // how close (screen px) the pointer must be to a rope to grab it
 
 export type View = 'front' | 'angle' | 'detail';
 
@@ -73,7 +75,8 @@ export class Stage {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(30, 1, 0.01, 60);
   readonly controls: OrbitControls;
-  readonly curtain = new Curtain();
+  readonly motion = new CurtainMotion();
+  readonly curtain = new Curtain(this.motion.uniforms);
   readonly overlay = new Overlay();
   private room: Room;
   private key = new THREE.DirectionalLight();
@@ -87,7 +90,10 @@ export class Stage {
   private backdrop: Backdrop | null = null;
   private studio = new Studio();
   private raycaster = new THREE.Raycaster();
-  private motion = false;
+  private breeze = false;
+  private physics = false;
+  private grabPointer: number | null = null;
+  private lastTick = 0;
 
   constructor(private host: HTMLElement) {
     const r = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -127,6 +133,7 @@ export class Stage {
       this.anim = null;
     });
 
+    this.attachHands();
     new ResizeObserver(() => this.resize()).observe(host);
     this.resize();
     r.setAnimationLoop((t) => this.tick(t));
@@ -156,15 +163,9 @@ export class Stage {
       this.dirty = true;
     }
     if (this.controls.update()) this.dirty = true;
-    // Ease the sway in and out; keep rendering while anything moves.
-    const sway = this.curtain.sway;
-    const target = this.motion ? SWAY_AMPLITUDE : 0;
-    if (target > 0 || sway.uAmp.value > 0) {
-      sway.uAmp.value += (target - sway.uAmp.value) * 0.04;
-      if (target === 0 && sway.uAmp.value < 1e-5) sway.uAmp.value = 0;
-      sway.uTime.value = now / 1000;
-      this.dirty = true;
-    }
+    const dt = this.lastTick ? (now - this.lastTick) / 1000 : 0;
+    this.lastTick = now;
+    if (this.motion.step(dt, now / 1000)) this.dirty = true;
     if (!this.dirty) return;
     this.dirty = false;
     this.renderer.render(this.scene, this.camera);
@@ -180,6 +181,8 @@ export class Stage {
     this.opening = { W, H };
     this.room.build(W, H);
     this.curtain.update(d, ropeColor);
+    // In the room the doorway frame limits how far ropes can swing sideways.
+    this.motion.configure(d, this.backdrop === 'room' ? W / 2 - (L.beadOD / 2) * MM : 0);
     this.overlay.update(L, d.placement, overlayOpacity);
     this.fitShadow();
     if (changed && this.view) this.setView(this.view, false);
@@ -194,13 +197,77 @@ export class Stage {
   setOverlayMode(on: boolean): void {
     if (on === this.overlay.visible) return;
     this.overlay.visible = on;
+    if (on) this.releaseGrab();
     this.controls.enabled = !on;
     if (on) this.setView('front');
     this.dirty = true;
   }
 
-  setMotion(on: boolean): void {
-    this.motion = on;
+  /** Breeze: gentle wind. Physics: ropes can be grabbed and swung with the pointer. */
+  setMotion(breeze: boolean, physics: boolean): void {
+    if (breeze === this.breeze && physics === this.physics) return;
+    this.breeze = breeze;
+    this.physics = physics;
+    if (!physics) this.releaseGrab();
+    this.motion.setModes(breeze, physics);
+    this.dirty = true;
+  }
+
+  // ------------------------------------------------------------ hands
+
+  /** Aim the raycaster at the pointer; returns its NDC position and the canvas rect. */
+  private aim(e: PointerEvent): { ndc: THREE.Vector2; rect: DOMRect } {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    this.raycaster.setFromCamera(ndc, this.camera);
+    return { ndc, rect };
+  }
+
+  /** Grab beads with the pointer when physics is on. Runs before the orbit controls see the event. */
+  private attachHands(): void {
+    const canvas = this.renderer.domElement;
+    const canGrab = () => this.motion.interactive && !this.overlay.visible;
+    canvas.addEventListener(
+      'pointerdown',
+      (e) => {
+        if (!canGrab() || e.button !== 0) return;
+        const { ndc, rect } = this.aim(e);
+        const target = this.motion.pick(this.camera, ndc, rect.width, rect.height, GRAB_PX);
+        if (!target) return; // empty space: the camera orbits as usual
+        this.controls.enabled = false;
+        this.motion.beginGrab(target, this.raycaster.ray, this.camera);
+        this.grabPointer = e.pointerId;
+        canvas.setPointerCapture(e.pointerId);
+        canvas.classList.add('grabbing');
+      },
+      { capture: true },
+    );
+    canvas.addEventListener('pointermove', (e) => {
+      if (this.grabPointer === e.pointerId) {
+        this.aim(e);
+        this.motion.moveGrab(this.raycaster.ray);
+        return;
+      }
+      if (e.buttons || !canGrab()) {
+        canvas.classList.remove('can-grab');
+        return;
+      }
+      const { ndc, rect } = this.aim(e);
+      canvas.classList.toggle('can-grab', this.motion.pick(this.camera, ndc, rect.width, rect.height, GRAB_PX) !== null);
+    });
+    const end = (e: PointerEvent) => {
+      if (this.grabPointer === e.pointerId) this.releaseGrab();
+    };
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
+  }
+
+  private releaseGrab(): void {
+    if (this.grabPointer === null) return;
+    this.motion.endGrab();
+    this.grabPointer = null;
+    this.renderer.domElement.classList.remove('grabbing');
+    this.controls.enabled = !this.overlay.visible;
   }
 
   /** Studio (white sweep, neutral light) or room (doorway, warm moods). */

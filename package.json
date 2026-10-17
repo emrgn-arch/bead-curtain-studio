@@ -2,6 +2,14 @@
   "name": "bead-curtain-studio",
   "private": true,
   "version": "0.1.0",
+  "description": "Design 3D-printed bead curtains from a picture.",
+  "author": "Emre Ergin (https://github.com/emrgn-arch)",
+  "license": "UNLICENSED",
+  "homepage": "https://emrgn-arch.github.io/bead-curtain-studio/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/emrgn-arch/bead-curtain-studio.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

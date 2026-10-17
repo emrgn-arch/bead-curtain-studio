@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 // Minimal ZIP writer (entries stored, not compressed). Used for the tray export
 // and for the 3MF packages themselves, which are ZIP containers.
 
@@ -11,7 +12,7 @@ const CRC_TABLE = (() => {
   return t;
 })();
 
-function crc32(data: Uint8Array): number {
+export function crc32(data: Uint8Array): number {
   let c = 0xffffffff;
   for (let i = 0; i < data.length; i++) c = CRC_TABLE[(c ^ data[i]) & 0xff] ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;

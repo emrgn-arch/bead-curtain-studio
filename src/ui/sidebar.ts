@@ -1,9 +1,10 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import { isLight } from '../core/color';
 import { download } from '../core/export';
 import { beadLengths, MAX_ROPES } from '../core/layout';
 import { MAX_COLOURS, OPENING_PRESETS, STEP_MAX, STEP_MIN, parseFilaments, type AppState, type Filament } from '../core/state';
 import { t } from '../i18n';
-import { colorField, dualRange, fmt, hint, panel, range, readout, segmented, setParams, showIf, type Ctx } from './controls';
+import { colorField, dualRange, fmt, hint, int, panel, range, readout, segmented, setParams, showIf, type Ctx } from './controls';
 import { h, ICONS, svgIcon } from './dom';
 
 export interface SidebarActions {
@@ -16,7 +17,7 @@ export interface SidebarActions {
 // ---------------------------------------------------------------- 01 image
 
 function imagePanel(ctx: Ctx, a: SidebarActions) {
-  const thumb = h('canvas', { class: 'thumb-canvas', width: 120, height: 160 });
+  const thumb = h('canvas', { class: 'thumb-canvas', width: 192, height: 256 });
   const name = h('b', {});
   const drop = h(
     'button',
@@ -281,8 +282,12 @@ function ropesPanel(ctx: Ctx) {
     range(ctx, { label: t('beadGap'), unit: 'mm', min: 0, max: 20, step: 0.5, get: (p) => p.ropes.sideGap, set: (p, v) => (p.ropes.sideGap = v) }),
     readout(ctx, 'spec-row', (d) => {
       const L = d.layout;
-      const warn = L.wall < 0.8 ? ' warn' : '';
-      return `<span><em>${t('beadDia')}</em>${fmt(L.beadOD)}</span><span><em>${t('holeDia')}</em>${fmt(L.hole, 2)}</span><span class="${warn}"><em>${t('wall')}</em>${fmt(L.wall, 2)}</span>`;
+      return (
+        `<span class="g-beads"><em>${t('beadDia')}</em>${fmt(L.beadOD)}</span>` +
+        `<span class="g-beads"><em>${t('holeDia')}</em>${fmt(L.hole, 2)}</span>` +
+        `<span class="g-ropes"><em>${t('statRopes')}</em>${int(L.n)}</span>` +
+        `<span class="g-beads"><em>${t('statBeads')}</em>${int(d.beadCount)}</span>`
+      );
     }),
     h(
       'details',

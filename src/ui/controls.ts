@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import type { Design } from '../core/design';
 import type { AppState, Params, Store } from '../core/state';
 import { locale, t } from '../i18n';

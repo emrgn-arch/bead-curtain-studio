@@ -1,49 +1,86 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import * as THREE from 'three';
 import { hexToLinear } from '../core/color';
 import type { Design } from '../core/design';
 import { makeBeadGeometry } from './beadGeometry';
+import type { MotionUniforms } from './motion';
 
 const MM = 0.001;
 
-/** Uniforms shared by every swaying material. Amplitude is in metres at the bottom of the curtain. */
-export interface SwayUniforms {
-  uTime: { value: number };
-  uAmp: { value: number };
-  uRailY: { value: number };
-  uDrop: { value: number };
+// Ropes hang from the rail; their shape comes from the motion simulation as a
+// float texture of node offsets (one row per rope, one texel per node). Ropes
+// and knots bend per vertex ("flex"); beads move rigidly and tilt with the rope.
+const MOTION_COMMON = /* glsl */ `
+uniform sampler2D uDisp;
+uniform float uRopes;
+uniform float uNodes;
+uniform float uX0;
+uniform float uPitch;
+uniform float uRailY;
+uniform float uDrop;
+uniform float uActive;
+
+vec3 ropeOffset( float row, float depth ) {
+  float f = clamp( depth / uDrop, 0.0, 1.0 ) * ( uNodes - 1.0 );
+  float k = floor( f );
+  int r = int( row );
+  vec3 a = texelFetch( uDisp, ivec2( int( k ), r ), 0 ).xyz;
+  vec3 b = texelFetch( uDisp, ivec2( int( min( k + 1.0, uNodes - 1.0 ) ), r ), 0 ).xyz;
+  return mix( a, b, f - k );
 }
 
-// Each rope swings like a pendulum from the rail: the offset grows linearly with
-// depth, so beads stay on their (straight) rope. Phase follows the rope's x so
-// neighbours move almost together, like a soft breeze passing through.
-const SWAY_VERTEX = /* glsl */ `
+float ropeRow( float x ) {
+  return clamp( floor( ( x - uX0 ) / uPitch + 0.5 ), 0.0, uRopes - 1.0 );
+}
+
+mat3 rotateFromTo( vec3 a, vec3 b ) {
+  vec3 v = cross( a, b );
+  float k = 1.0 / max( 1.0 + dot( a, b ), 1e-4 );
+  mat3 vx = mat3( 0.0, v.z, -v.y, -v.z, 0.0, v.x, v.y, -v.x, 0.0 );
+  return mat3( 1.0 ) + vx + vx * vx * k;
+}
+`;
+
+const FLEX_VERTEX = /* glsl */ `
 vec4 mvPosition = vec4( transformed, 1.0 );
-float swayX = 0.0;
 #ifdef USE_INSTANCING
   mvPosition = instanceMatrix * mvPosition;
-  swayX = instanceMatrix[3].x;
+  if ( uActive > 0.5 ) mvPosition.xyz += ropeOffset( ropeRow( instanceMatrix[3].x ), uRailY - mvPosition.y );
 #endif
-float swayDepth = clamp( ( uRailY - mvPosition.y ) / uDrop, 0.0, 1.2 );
-float swayA = sin( uTime * 1.15 + swayX * 3.1 ) * 0.65 + sin( uTime * 0.67 + swayX * 7.3 + 1.7 ) * 0.35;
-float swayB = sin( uTime * 0.83 + swayX * 4.7 + 0.6 );
-mvPosition.x += uAmp * swayDepth * swayA;
-mvPosition.z += uAmp * 0.7 * swayDepth * swayB;
 mvPosition = modelViewMatrix * mvPosition;
 gl_Position = projectionMatrix * mvPosition;
 `;
 
-function withSway<M extends THREE.Material>(mat: M, u: SwayUniforms): M {
+const RIGID_VERTEX = /* glsl */ `
+vec4 mvPosition = vec4( transformed, 1.0 );
+#ifdef USE_INSTANCING
+  mvPosition = instanceMatrix * mvPosition;
+  if ( uActive > 0.5 ) {
+    vec3 centre = instanceMatrix[3].xyz;
+    float row = ropeRow( centre.x );
+    float depth = uRailY - centre.y;
+    float h = 0.5 * uDrop / ( uNodes - 1.0 );
+    vec3 along = vec3( 0.0, -2.0 * h, 0.0 ) + ropeOffset( row, depth + h ) - ropeOffset( row, depth - h );
+    mat3 tilt = rotateFromTo( vec3( 0.0, -1.0, 0.0 ), normalize( along ) );
+    mvPosition.xyz = centre + ropeOffset( row, depth ) + tilt * ( mvPosition.xyz - centre );
+    #ifndef FLAT_SHADED
+      vNormal = normalize( mat3( viewMatrix ) * ( tilt * ( transpose( mat3( viewMatrix ) ) * vNormal ) ) );
+    #endif
+  }
+#endif
+mvPosition = modelViewMatrix * mvPosition;
+gl_Position = projectionMatrix * mvPosition;
+`;
+
+function withMotion<M extends THREE.Material>(mat: M, u: MotionUniforms, mode: 'flex' | 'rigid'): M {
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, u);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
-uniform float uTime;
-uniform float uAmp;
-uniform float uRailY;
-uniform float uDrop;`)
-      .replace('#include <project_vertex>', SWAY_VERTEX);
+${MOTION_COMMON}`)
+      .replace('#include <project_vertex>', mode === 'rigid' ? RIGID_VERTEX : FLEX_VERTEX);
   };
-  mat.customProgramCacheKey = () => 'sway';
+  mat.customProgramCacheKey = () => `curtain-${mode}`;
   return mat;
 }
 
@@ -66,17 +103,22 @@ function writeTranslation(arr: Float32Array | ArrayLike<number>, i: number, x: n
 /** Rail, ropes, knots and beads — beads are one InstancedMesh per bead length. */
 export class Curtain {
   readonly group = new THREE.Group();
-  readonly sway: SwayUniforms = { uTime: { value: 0 }, uAmp: { value: 0 }, uRailY: { value: 2 }, uDrop: { value: 2 } };
-  private beadMat = withSway(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0 }), this.sway);
-  private ropeMat = withSway(new THREE.MeshStandardMaterial({ color: '#d9c7a5', roughness: 0.95 }), this.sway);
-  /** Shadow pass material that sways the same way, so shadows follow the ropes. */
-  private depthMat = withSway(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }), this.sway);
+  private beadMat: THREE.MeshStandardMaterial;
+  private ropeMat: THREE.MeshStandardMaterial;
+  /** Shadow pass material that moves the same way, so shadows follow the ropes. */
+  private depthMat: THREE.MeshDepthMaterial;
   private railMat = new THREE.MeshStandardMaterial({ color: '#8f5f39', roughness: 0.42 });
   private batches: BeadBatch[] = [];
   private ropes: { mesh: THREE.InstancedMesh; cap: number; r: number } | null = null;
   private knots: { mesh: THREE.InstancedMesh; cap: number; r: number } | null = null;
   private rail: THREE.Mesh | null = null;
   private railKey = '';
+
+  constructor(motion: MotionUniforms) {
+    this.beadMat = withMotion(new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0 }), motion, 'rigid');
+    this.ropeMat = withMotion(new THREE.MeshStandardMaterial({ color: '#d9c7a5', roughness: 0.95 }), motion, 'flex');
+    this.depthMat = withMotion(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }), motion, 'flex');
+  }
 
   setRailColor(hex: string): void {
     this.railMat.color.set(hex);
@@ -85,8 +127,6 @@ export class Curtain {
   update(d: Design, ropeColor: string): void {
     const L = d.layout;
     this.ropeMat.color.set(ropeColor);
-    this.sway.uRailY.value = L.railY * MM;
-    this.sway.uDrop.value = Math.max(0.2, (L.railY - L.zoneBottom) * MM);
     this.updateRail(L.W, L.railY);
     this.updateBeads(d);
     this.updateRopes(d);
@@ -199,7 +239,7 @@ export class Curtain {
   private updateRopes(d: Design): void {
     const L = d.layout;
     const rr = (L.ropeD / 2) * MM;
-    const ropes = this.ensure('ropes', L.n, rr, (r) => new THREE.CylinderGeometry(r, r, 1, 8, 1, true));
+    const ropes = this.ensure('ropes', L.n, rr, (r) => new THREE.CylinderGeometry(r, r, 1, 8, 48, true));
     const top = (L.railY + 8) * MM; // loops over the rail
     for (let i = 0; i < L.n; i++) {
       const bottom = d.ropeBottom[i] * MM;

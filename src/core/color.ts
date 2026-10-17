@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 // Color utilities. All perceptual matching happens in OKLab, which is cheap and
 // far closer to human perception than RGB distance.
 

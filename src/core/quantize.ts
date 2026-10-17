@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 import { deltaE, hexToOklab, oklabToHex, type Lab } from './color';
 import type { Grid } from './image';
 import type { Filament } from './state';

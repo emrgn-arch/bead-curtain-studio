@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 // UI strings. English is the reference; the Turkish table must have every key
 // (TypeScript enforces it). Placeholders look like {name}.
 
@@ -24,7 +25,7 @@ const en = {
 
   dropTitle: 'Drop an image',
   dropSub: 'or click to upload',
-  demoName: 'Demo: sunset',
+  demoName: 'Demo image',
   useDemo: 'Use the demo image',
   placeImage: 'Place image',
   confirmPlacement: 'Confirm placement',
@@ -104,6 +105,8 @@ const en = {
   moodEvening: 'Evening',
   motion: 'Motion',
   motionTitle: 'Gentle rope sway',
+  physics: 'Physics',
+  physicsTitle: 'Drag the beads to swing the curtain',
   screenshot: 'Screenshot',
   screenshotTitle: 'Save a PNG of the view',
   imageOverlay: 'Image overlay',
@@ -189,7 +192,7 @@ const tr: Record<MessageKey, string> = {
 
   dropTitle: 'Görseli bırak',
   dropSub: 'ya da tıklayıp yükle',
-  demoName: 'Örnek: gün batımı',
+  demoName: 'Örnek görsel',
   useDemo: 'Örnek görseli kullan',
   placeImage: 'Görseli yerleştir',
   confirmPlacement: 'Yerleşimi onayla',
@@ -269,6 +272,8 @@ const tr: Record<MessageKey, string> = {
   moodEvening: 'Akşam',
   motion: 'Hareket',
   motionTitle: 'Hafif ip salınımı',
+  physics: 'Fizik',
+  physicsTitle: 'Perdeyi sallamak için boncukları sürükle',
   screenshot: 'Ekran görüntüsü',
   screenshotTitle: 'Görünümü PNG olarak kaydet',
   imageOverlay: 'Görsel katmanı',

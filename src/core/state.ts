@@ -1,3 +1,4 @@
+// Strands — © 2026 Emre Ergin (emrgn-arch) · https://github.com/emrgn-arch/bead-curtain-studio
 // All physical dimensions are millimetres.
 
 export type DensityMode = 'pitch' | 'count';
@@ -62,8 +63,10 @@ export interface SceneParams {
   backdrop: Backdrop;
   /** Lighting mood of the room backdrop. */
   mood: Mood;
-  /** Gentle rope sway in the 3D view. */
+  /** Gentle breeze in the 3D view. */
   motion: boolean;
+  /** Rope physics: beads can be grabbed and swung with the pointer. */
+  physics: boolean;
 }
 
 export type PrinterId = 'x1' | 'a1mini' | 'h2d';
@@ -133,11 +136,11 @@ export const STEP_MAX = 150;
 export function defaultParams(): Params {
   return {
     opening: { width: 900, height: 2100, topOffset: 60, bottomClearance: 40, sideMargin: 10 },
-    ropes: { density: 'pitch', pitch: 25, count: 35, diameter: 1.5, color: '#d9c7a5', holeClearance: 0.5, sideGap: 5 },
+    ropes: { density: 'pitch', pitch: 30, count: 29, diameter: 1.5, color: '#d9c7a5', holeClearance: 0.5, sideGap: 10 },
     image: { offsetX: 0, offsetY: 0, zoom: 1, brightness: 1, contrast: 1, saturation: 1, outside: 'fill', fillColor: '#e9dcc4' },
-    resolution: { step: 10, maxLength: 100, lengthCount: 4, dither: 0 },
+    resolution: { step: 25, maxLength: 100, lengthCount: 4, dither: 0 },
     colors: { mode: 'free', maxColors: 4 },
-    scene: { backdrop: 'studio', mood: 'golden', motion: true },
+    scene: { backdrop: 'studio', mood: 'golden', motion: true, physics: true },
     export: { printer: 'x1' },
   };
 }
@@ -179,8 +182,28 @@ export class Store<T> {
 
 // ---------------------------------------------------------------- persistence (browser localStorage)
 
-const PARAMS_KEY = 'bead-curtain-studio.params.v4';
-const PREVIOUS_PARAMS_KEY = 'bead-curtain-studio.params.v3';
+const PARAMS_KEY = 'bead-curtain-studio.params.v6';
+
+/**
+ * Settings saved by earlier versions still load. Fields whose defaults changed
+ * since then are reset once, so returning visitors get the new defaults too.
+ * Newest first; each entry also applies the resets of the entries above it.
+ */
+const EARLIER_VERSIONS: { key: string; reset: (p: Params, d: Params) => void }[] = [
+  { key: 'bead-curtain-studio.params.v5', reset: (p, d) => (p.scene.physics = d.scene.physics) },
+  {
+    key: 'bead-curtain-studio.params.v4',
+    reset: (p, d) => {
+      p.resolution.step = d.resolution.step;
+      p.resolution.maxLength = d.resolution.maxLength;
+      p.resolution.lengthCount = d.resolution.lengthCount;
+      p.ropes.pitch = d.ropes.pitch;
+      p.ropes.count = d.ropes.count;
+      p.ropes.sideGap = d.ropes.sideGap;
+    },
+  },
+  { key: 'bead-curtain-studio.params.v3', reset: (p, d) => (p.colors.maxColors = d.colors.maxColors) },
+];
 const FILAMENTS_KEY = 'bead-curtain-studio.filaments.v1';
 
 function mergeDeep<T>(base: T, patch: unknown): T {
@@ -215,12 +238,17 @@ function write(key: string, value: unknown): void {
 }
 
 export function loadParams(): Params {
+  const defaults = defaultParams();
   const saved = read(PARAMS_KEY);
-  if (saved) return mergeDeep(defaultParams(), saved);
-  // Settings from the previous version carry over, except the colour count, whose default changed.
-  const p = mergeDeep(defaultParams(), read(PREVIOUS_PARAMS_KEY));
-  p.colors.maxColors = defaultParams().colors.maxColors;
-  return p;
+  if (saved) return mergeDeep(defaults, saved);
+  for (let i = 0; i < EARLIER_VERSIONS.length; i++) {
+    const old = read(EARLIER_VERSIONS[i].key);
+    if (!old) continue;
+    const p = mergeDeep(defaults, old);
+    for (let j = 0; j <= i; j++) EARLIER_VERSIONS[j].reset(p, defaults);
+    return p;
+  }
+  return defaults;
 }
 
 export function saveParams(p: Params): void {
