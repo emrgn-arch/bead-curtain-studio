@@ -11,7 +11,7 @@ import { getLang, setLang, t, type Lang } from './i18n';
 import { Stage } from './scene/stage';
 import { buildSheet } from './ui/buildsheet';
 import type { Ctx } from './ui/controls';
-import { h, ICONS, svgIcon } from './ui/dom';
+import { h } from './ui/dom';
 import { buildSidebar } from './ui/sidebar';
 import { attachPlacement, buildViewport } from './ui/viewport';
 
@@ -135,7 +135,7 @@ function buildHeader(): HTMLElement {
     { class: 'topbar' },
     h('div', { class: 'brand' }, h('a', { class: 'logo', href: REPO_URL, target: '_blank', rel: 'noopener', title: CREDIT }, 'Strands'), h('span', { class: 'sticker' }, t('sticker'))),
     h('span', { class: 'tagline' }, t('tagline')),
-    h('div', { class: 'top-actions' }, langSwitch, resetBtn, h('button', { type: 'button', class: 'btn btn-dark', onClick: () => fileInput.click() }, svgIcon(ICONS.upload, 16), t('uploadImage'))),
+    h('div', { class: 'top-actions' }, langSwitch, resetBtn),
   );
 }
 

@@ -284,16 +284,18 @@ button { font: inherit; color: inherit; }
   border: 1px dashed var(--line-2);
   border-radius: 14px;
   cursor: pointer;
+  position: relative;
   transition: border-color 0.15s, background 0.15s;
 }
 .dropzone:hover { border-color: var(--ink); background: var(--surface-2); }
 .dropzone:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .thumb { width: 90px; height: 120px; border-radius: 10px; overflow: hidden; flex: none; background: var(--line); }
 .thumb-canvas { width: 100%; height: 100%; display: block; }
-.drop-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; font-size: 11.5px; color: var(--ink-3); }
-.drop-title { font: 400 24px/1.1 var(--display); color: var(--ink); }
-.drop-text b { font: 500 11px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
-.dropzone > svg { color: var(--ink-3); flex: none; }
+.drop-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; font-size: 13.5px; color: var(--ink-3); }
+.drop-title { font: 400 31px/1.05 var(--display); color: var(--ink); white-space: nowrap; }
+.drop-text b { font: 500 11.5px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+/* The upload arrow sits in the corner so the title gets the full width. */
+.dropzone > svg { color: var(--ink-3); position: absolute; top: 10px; right: 10px; width: 16px; height: 16px; }
 
 /* disclosure */
 .more { border-top: 1px solid var(--line); padding-top: 12px; }
