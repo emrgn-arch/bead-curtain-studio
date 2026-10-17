@@ -254,6 +254,9 @@ button { font: inherit; color: inherit; }
 .btn-primary:hover, .btn-dark:hover { background: #2b2b2b; }
 .btn-ghost { background: #fff; border-color: var(--line-2); color: var(--ink); }
 .btn-ghost:hover { border-color: var(--ink); }
+.btn-outline { background: #fff; border-color: var(--ink); color: var(--ink); }
+.btn-outline:hover { background: var(--ink); color: #fff; }
+
 .btn-glass { background: var(--glass); color: var(--ink); border-color: rgba(0, 0, 0, 0.07); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06); }
 .btn-glass:hover { background: #fff; }
 .btn-block { width: 100%; }
@@ -358,6 +361,9 @@ button { font: inherit; color: inherit; }
   pointer-events: none;
 }
 .vp-badge b { color: var(--ink); font-weight: 500; }
+/* Signature in the corner of the 3D view. */
+.vp-credit { position: absolute; z-index: 2; right: 18px; bottom: 14px; font: 400 10px var(--mono); letter-spacing: 0.03em; color: rgba(0, 0, 0, 0.42); text-decoration: none; white-space: nowrap; }
+.vp-credit:hover { color: var(--ink); }
 .vp-badge i { font-style: normal; color: var(--ink-3); padding: 0 3px; }
 
 .overlay-bar {
@@ -409,9 +415,6 @@ body.dragging .drop-veil { display: grid; }
 .sheet > * { flex: none; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; }
 .sheet-head h2 { margin: 0; font: 400 32px/1.15 var(--display); }
-.live { display: inline-flex; align-items: center; gap: 6px; font: 500 10px var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); border: 1px solid var(--line-2); border-radius: 999px; padding: 4px 9px 4px 8px; }
-.live i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); animation: pulse 2s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: 0.25; } }
 .sheet h3 { margin: 4px 0 -6px; font: 500 10px var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); }
 .pattern-wrap { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; justify-content: center; }
 .pattern { display: block; max-width: 100%; }

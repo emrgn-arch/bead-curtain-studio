@@ -102,7 +102,7 @@ function screenshot(): void {
 // ---------------------------------------------------------------- layout
 
 function buildHeader(): HTMLElement {
-  const resetBtn = h('button', { type: 'button', class: 'btn btn-ghost' }, t('resetDesign'));
+  const resetBtn = h('button', { type: 'button', class: 'btn btn-outline' }, t('resetDesign'));
   let armed = 0;
   resetBtn.addEventListener('click', () => {
     if (!armed) {

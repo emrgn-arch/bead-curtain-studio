@@ -10,6 +10,7 @@ const en = {
   tagline: 'Your picture in → every bead out',
   resetDesign: 'Reset design',
   resetConfirm: 'Click again to reset',
+  builtBy: 'built by {name}',
   unreadableImage: 'Sorry, that file could not be read as an image.',
   noWebgl: 'WebGL is not available in this browser, so the 3D preview is disabled. The build sheet still works.',
   language: 'Language',
@@ -122,7 +123,6 @@ const en = {
   badge: '<b>{n}</b> ropes <i>/</i> <b>{m}</b> beads <i>/</i> {w} × {h} m',
 
   buildSheet: 'Build sheet',
-  live: 'live',
   statRopes: 'Ropes',
   statBeads: 'Beads',
   statColours: 'Colours',
@@ -174,9 +174,10 @@ export type MessageKey = keyof typeof en;
 const tr: Record<MessageKey, string> = {
   docTitle: 'Strands — Boncuk Perde Stüdyosu',
   sticker: 'Boncuk perde stüdyosu',
-  tagline: 'Resminden boncuk boncuk perdeye',
+  tagline: 'Resminden boncuk perdeye',
   resetDesign: 'Tasarımı sıfırla',
   resetConfirm: 'Onaylamak için tekrar tıkla',
+  builtBy: '{name} tarafından yapıldı',
   unreadableImage: 'Üzgünüz, bu dosya görsel olarak okunamadı.',
   noWebgl: 'Bu tarayıcıda WebGL yok, bu yüzden 3B önizleme kapalı. Üretim föyü yine de çalışır.',
   language: 'Dil',
@@ -289,7 +290,6 @@ const tr: Record<MessageKey, string> = {
   badge: '<b>{n}</b> ip <i>/</i> <b>{m}</b> boncuk <i>/</i> {w} × {h} m',
 
   buildSheet: 'Üretim föyü',
-  live: 'canlı',
   statRopes: 'İp',
   statBeads: 'Boncuk',
   statColours: 'Renk',

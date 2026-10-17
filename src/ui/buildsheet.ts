@@ -155,7 +155,7 @@ export function buildSheet(ctx: Ctx): HTMLElement {
   return h(
     'aside',
     { class: 'sheet', 'aria-label': t('buildSheet') },
-    h('div', { class: 'sheet-head' }, h('h2', {}, t('buildSheet')), h('span', { class: 'live' }, h('i', {}), t('live'))),
+    h('div', { class: 'sheet-head' }, h('h2', {}, t('buildSheet'))),
     warnings,
     h('div', { class: 'pattern-wrap' }, canvas),
     stats,

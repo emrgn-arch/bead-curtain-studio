@@ -97,6 +97,7 @@ export function buildViewport(ctx: Ctx, host: HTMLElement, a: ViewportActions): 
     host,
     h('div', { class: 'vp-top' }, h('div', { class: 'seg seg-dark', role: 'group', 'aria-label': t('cameraView') }, viewBtns), h('div', { class: 'vp-right' }, backdrop, mood, motion, physics, h('button', { type: 'button', class: 'btn btn-glass btn-icon', title: t('screenshotTitle'), 'aria-label': t('screenshot'), onClick: a.screenshot }, svgIcon(ICONS.camera, 17)))),
     badge,
+    h('a', { class: 'vp-credit', href: 'https://github.com/emrgn-arch', target: '_blank', rel: 'noopener' }, t('builtBy', { name: 'Emre Ergin' })),
     bar,
     h('div', { class: 'drop-veil' }, h('span', {}, t('dropToLoad'))),
   );
