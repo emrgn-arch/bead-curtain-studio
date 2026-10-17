@@ -14,6 +14,8 @@ export interface Design {
   palette: PaletteEntry[];
   /** Planned bead lengths, mm, ascending (a length may end up unused). */
   lengths: number[];
+  /** Bevel on the beads' outer edges, mm (never more than the wall allows). */
+  chamfer: number;
 
   beadCount: number;
   bRope: Uint16Array;
@@ -74,7 +76,7 @@ export class DesignEngine {
   compute(state: AppState): Design {
     const p = state.params;
     const fast = state.ui.interacting;
-    const { color: _ropeColor, ...ropeGeom } = p.ropes;
+    const { color: _ropeColor, chamfer: _chamfer, ...ropeGeom } = p.ropes;
 
     const layoutKey = JSON.stringify([p.opening, ropeGeom, p.resolution.step]);
     const layout = this.memo('layout', layoutKey, () => computeLayout(p));
@@ -119,7 +121,9 @@ export class DesignEngine {
     const fitKey = JSON.stringify([mapKey, lengths]);
     const fit = this.memo('fit', fitKey, () => this.fitBeads(layout, mapped.idx, lengths));
 
-    return this.assemble(layout, placement, mapped.palette, lengths, fit.beads, fit.ropeOf);
+    const design = this.assemble(layout, placement, mapped.palette, lengths, fit.beads, fit.ropeOf);
+    design.chamfer = Math.max(0, Math.min(p.ropes.chamfer, layout.wall * 0.9));
+    return design;
   }
 
   private fitBeads(layout: Layout, idx: Int16Array, lengths: number[]) {
@@ -190,7 +194,7 @@ export class DesignEngine {
     if (count > 120_000) warnings.push({ level: 'warn', key: 'wManyBeads', vars: { n: count.toLocaleString() } });
 
     return {
-      layout, placement, palette, lengths,
+      layout, placement, palette, lengths, chamfer: 0,
       beadCount: count, bRope, bY, bLen, bColor,
       knotCount: knotY.length, knotRope: Uint16Array.from(knotRope), knotY: Float32Array.from(knotY), ropeBottom,
       colorCounts, lengthCounts, bom, grams, totalGrams, ropeLengths, totalRope,

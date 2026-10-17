@@ -45,6 +45,25 @@ export const RAIL_DROP = 22; // rail centre below top of opening
 export const MIN_WALL = 0.8;
 export const MAX_ROPES = 100; // upper limit when choosing ropes by count
 
+/** Chamfer slope against the build plate. Steeper than 45° so the underside prints cleanly without support. */
+export const CHAMFER_ANGLE = 55;
+
+/**
+ * Outer-edge chamfer of one bead: horizontal width `w` (the slider value) and
+ * vertical height `h` from the slope. Kept inside the wall and below half the
+ * bead's length. Works in any unit, as long as all inputs share it.
+ */
+export function chamferSize(width: number, length: number, wall: number): { w: number; h: number } {
+  const slope = Math.tan((CHAMFER_ANGLE * Math.PI) / 180);
+  let w = Math.max(0, Math.min(width, wall * 0.9));
+  let h = w * slope;
+  if (h > length * 0.45) {
+    h = length * 0.45;
+    w = h / slope;
+  }
+  return { w, h };
+}
+
 /**
  * Bead lengths in mm: `count` values spread evenly from the shortest to the
  * longest bead (both always included), rounded to 0.5 mm.

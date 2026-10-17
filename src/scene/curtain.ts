@@ -161,7 +161,8 @@ export class Curtain {
 
     // Make sure there is one batch per length with enough capacity.
     d.lengths.forEach((len, li) => {
-      const key = `${len}|${R}|${r}|${seg}`;
+      const ch = d.chamfer * MM;
+      const key = `${len}|${R}|${r}|${seg}|${ch}`;
       let b = this.batches[li];
       if (b && b.key !== key) {
         this.group.remove(b.mesh);
@@ -170,7 +171,7 @@ export class Curtain {
         b = undefined as unknown as BeadBatch;
       }
       if (!b || b.cap < counts[li]) {
-        const geometry = b ? b.geometry : makeBeadGeometry(len * MM, R, r, seg);
+        const geometry = b ? b.geometry : makeBeadGeometry(len * MM, R, r, seg, ch);
         if (b) {
           this.group.remove(b.mesh);
           b.mesh.dispose();

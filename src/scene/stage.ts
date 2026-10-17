@@ -162,7 +162,10 @@ export class Stage {
       if (t >= 1) this.anim = null;
       this.dirty = true;
     }
-    if (this.controls.update()) this.dirty = true;
+    if (this.controls.update()) {
+      this.keepFocus();
+      this.dirty = true;
+    }
     const dt = this.lastTick ? (now - this.lastTick) / 1000 : 0;
     this.lastTick = now;
     if (this.motion.step(dt, now / 1000)) this.dirty = true;
@@ -319,6 +322,24 @@ export class Stage {
 
   // ------------------------------------------------------------ camera
 
+  /**
+   * Right-drag pans the view; keep the point the camera orbits around on the
+   * curtain so it can never be panned out of sight. Camera and target shift
+   * together, so the viewing angle and distance stay the same.
+   */
+  private keepFocus(): void {
+    const { W, H } = this.opening;
+    if (!W || !H) return;
+    const t = this.controls.target;
+    const x = THREE.MathUtils.clamp(t.x, -W / 2, W / 2);
+    const y = THREE.MathUtils.clamp(t.y, 0.05, H);
+    const z = THREE.MathUtils.clamp(t.z, -0.25, 0.25);
+    if (x === t.x && y === t.y && z === t.z) return;
+    const shift = new THREE.Vector3(x - t.x, y - t.y, z - t.z);
+    t.add(shift);
+    this.camera.position.add(shift);
+  }
+
   setView(v: View, animate = true): void {
     const { W, H } = this.opening;
     const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
@@ -330,9 +351,16 @@ export class Stage {
       target = new THREE.Vector3(0, cy, 0);
       pos = new THREE.Vector3(0, cy, d);
     } else if (v === 'angle') {
-      const a = THREE.MathUtils.degToRad(34);
-      target = new THREE.Vector3(0, cy * 0.95, 0);
-      pos = new THREE.Vector3(-Math.sin(a) * d * 1.1, cy + H * 0.06, Math.cos(a) * d * 1.1);
+      // From further back, above and to the right, looking down onto the curtain.
+      const azimuth = THREE.MathUtils.degToRad(38);
+      const elevation = THREE.MathUtils.degToRad(22);
+      const dist = Math.min(d * 1.45, this.controls.maxDistance * 0.97);
+      target = new THREE.Vector3(0, cy * 0.9, 0);
+      pos = new THREE.Vector3(
+        Math.sin(azimuth) * Math.cos(elevation) * dist,
+        target.y + Math.sin(elevation) * dist,
+        Math.cos(azimuth) * Math.cos(elevation) * dist,
+      );
     } else {
       target = new THREE.Vector3(-W * 0.12, H * 0.6, 0);
       pos = new THREE.Vector3(W * 0.08, H * 0.64, 0.38);

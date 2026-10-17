@@ -5,6 +5,7 @@
 import { CREDIT } from '../credit';
 import { paletteLabels, t } from '../i18n';
 import type { Design } from './design';
+import { chamferSize } from './layout';
 import { PRINTERS, type PrinterId } from './state';
 import { zip, type ZipEntry } from './zip';
 
@@ -57,10 +58,10 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
  * walked bottom → outer wall → top → bore, which with (a, b, c) winding gives
  * outward-facing triangles everywhere.
  */
-function beadMesh(L: number, R: number, r: number): string {
-  const c = Math.min(0.4, L * 0.15, (R - r) * 0.3);
-  const prof: [number, number][] = c >= 0.05
-    ? [[r, 0], [R - c, 0], [R, c], [R, L - c], [R - c, L], [r, L]]
+function beadMesh(L: number, R: number, r: number, chamfer: number): string {
+  const { w, h } = chamferSize(chamfer, L, R - r);
+  const prof: [number, number][] = w >= 0.05
+    ? [[r, 0], [R - w, 0], [R, h], [R, L - h], [R - w, L], [r, L]]
     : [[r, 0], [R, 0], [R, L], [r, L]];
   const P = prof.length;
   const v: string[] = [];
@@ -123,7 +124,7 @@ export function traysZip(d: Design, printer: PrinterId): Uint8Array<ArrayBuffer>
   const { trays } = planTrays(d, printer);
   const R = d.layout.beadOD / 2;
   const r = d.layout.hole / 2;
-  const meshes = d.lengths.map((L) => beadMesh(L, R, r));
+  const meshes = d.lengths.map((L) => beadMesh(L, R, r, d.chamfer));
   const labels = paletteLabels(d.palette);
   const allSlots = slots(plate.w, plate.d, d.layout.beadOD);
   const centre = `1 0 0 0 1 0 0 0 1 ${num(plate.w / 2)} ${num(plate.d / 2)} 0`;

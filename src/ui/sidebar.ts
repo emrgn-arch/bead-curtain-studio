@@ -300,6 +300,7 @@ function ropesPanel(ctx: Ctx) {
         range(ctx, { label: t('clearance'), unit: 'mm', min: 0, max: 2, step: 0.05, get: (p) => p.ropes.holeClearance, set: (p, v) => (p.ropes.holeClearance = v) }),
       ),
       colorField(ctx, t('ropeColour'), (p) => p.ropes.color, (p, v) => (p.ropes.color = v)),
+      range(ctx, { label: t('chamfer'), unit: 'mm', min: 0, max: 3, step: 0.1, get: (p) => p.ropes.chamfer, set: (p, v) => (p.ropes.chamfer = v) }),
     ),
   );
   ctx.onDesign.push((d) => P.setSummary(`${t('ropesSummary', { n: d.layout.n })} · Ø${fmt(d.layout.beadOD)}`));

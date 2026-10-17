@@ -27,6 +27,8 @@ export interface RopeParams {
   color: string;
   /** Bead hole Ø = rope Ø + clearance. */
   holeClearance: number;
+  /** Bevel on the bead's outer edges, mm. */
+  chamfer: number;
   /** Horizontal gap between beads on neighbouring ropes. Bead Ø = pitch − gap. */
   sideGap: number;
 }
@@ -136,7 +138,7 @@ export const STEP_MAX = 150;
 export function defaultParams(): Params {
   return {
     opening: { width: 900, height: 2100, topOffset: 60, bottomClearance: 40, sideMargin: 10 },
-    ropes: { density: 'pitch', pitch: 30, count: 29, diameter: 1.5, color: '#d9c7a5', holeClearance: 0.5, sideGap: 10 },
+    ropes: { density: 'pitch', pitch: 30, count: 29, diameter: 1.5, color: '#d9c7a5', holeClearance: 0.5, sideGap: 10, chamfer: 1.5 },
     image: { offsetX: 0, offsetY: 0, zoom: 1, brightness: 1, contrast: 1, saturation: 1, outside: 'fill', fillColor: '#e9dcc4' },
     resolution: { step: 25, maxLength: 100, lengthCount: 4, dither: 0 },
     colors: { mode: 'free', maxColors: 4 },
@@ -182,7 +184,7 @@ export class Store<T> {
 
 // ---------------------------------------------------------------- persistence (browser localStorage)
 
-const PARAMS_KEY = 'bead-curtain-studio.params.v6';
+const PARAMS_KEY = 'bead-curtain-studio.params.v8';
 
 /**
  * Settings saved by earlier versions still load. Fields whose defaults changed
@@ -190,6 +192,8 @@ const PARAMS_KEY = 'bead-curtain-studio.params.v6';
  * Newest first; each entry also applies the resets of the entries above it.
  */
 const EARLIER_VERSIONS: { key: string; reset: (p: Params, d: Params) => void }[] = [
+  { key: 'bead-curtain-studio.params.v7', reset: (p, d) => (p.ropes.chamfer = d.ropes.chamfer) },
+  { key: 'bead-curtain-studio.params.v6', reset: (p, d) => (p.ropes.chamfer = d.ropes.chamfer) },
   { key: 'bead-curtain-studio.params.v5', reset: (p, d) => (p.scene.physics = d.scene.physics) },
   {
     key: 'bead-curtain-studio.params.v4',
